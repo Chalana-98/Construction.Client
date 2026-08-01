@@ -1028,3 +1028,247 @@ export interface UpdateProjectMemberDto {
   isActive?: boolean;
   notes?: string;
 }
+
+// ============================================
+// RFI Types
+// ============================================
+
+export enum RFIStatus {
+  Draft = 0,
+  Open = 1,
+  UnderReview = 2,
+  Answered = 3,
+  Closed = 4,
+  Void = 5,
+}
+
+export const RFIStatusLabels: Record<RFIStatus, string> = {
+  [RFIStatus.Draft]: 'Draft',
+  [RFIStatus.Open]: 'Open',
+  [RFIStatus.UnderReview]: 'Under Review',
+  [RFIStatus.Answered]: 'Answered',
+  [RFIStatus.Closed]: 'Closed',
+  [RFIStatus.Void]: 'Void',
+};
+
+export interface RFIDto {
+  id: string;
+  projectId: string;
+  projectName: string;
+  number: string;
+  title: string;
+  question: string;
+  answer?: string;
+  status: RFIStatus;
+  statusName: string;
+  assignedToId?: string;
+  assignedToName?: string;
+  createdById: string;
+  createdByName: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateRFIDto {
+  projectId: string;
+  title: string;
+  question: string;
+  assignedToId?: string;
+}
+
+export interface UpdateRFIDto {
+  title?: string;
+  question?: string;
+  answer?: string;
+  status?: RFIStatus;
+  assignedToId?: string;
+}
+
+export interface RFICommentDto {
+  id: string;
+  rfiId: string;
+  content: string;
+  createdById: string;
+  createdByName: string;
+  createdAt: string;
+}
+
+export interface RFIAttachmentDto {
+  id: string;
+  rfiId: string;
+  fileName: string;
+  filePath: string;
+  contentType: string;
+  fileSize: number;
+  createdById: string;
+  createdByName: string;
+  createdAt: string;
+}
+
+// ============================================
+// Change Order Types
+// ============================================
+
+export enum ChangeOrderStatus {
+  Draft = 0,
+  Pending = 1,
+  Approved = 2,
+  Rejected = 3,
+  Void = 4,
+}
+
+export const ChangeOrderStatusLabels: Record<ChangeOrderStatus, string> = {
+  [ChangeOrderStatus.Draft]: 'Draft',
+  [ChangeOrderStatus.Pending]: 'Pending',
+  [ChangeOrderStatus.Approved]: 'Approved',
+  [ChangeOrderStatus.Rejected]: 'Rejected',
+  [ChangeOrderStatus.Void]: 'Void',
+};
+
+export interface ChangeOrderDto {
+  id: string;
+  projectId: string;
+  projectName: string;
+  number: string;
+  title: string;
+  description: string;
+  status: ChangeOrderStatus;
+  statusName: string;
+  requestedAmount: number;
+  approvedAmount?: number;
+  scheduleImpactDays: number;
+  createdById: string;
+  createdByName: string;
+  approvedById?: string;
+  approvedByName?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateChangeOrderDto {
+  projectId: string;
+  title: string;
+  description: string;
+  requestedAmount: number;
+  scheduleImpactDays: number;
+}
+
+export interface UpdateChangeOrderDto {
+  title?: string;
+  description?: string;
+  status?: ChangeOrderStatus;
+  requestedAmount?: number;
+  scheduleImpactDays?: number;
+}
+
+// ============================================
+// Vendor Types
+// ============================================
+
+export enum VendorType {
+  Subcontractor = 0,
+  Supplier = 1,
+  Consultant = 2,
+  EquipmentRental = 3,
+  Other = 4,
+}
+
+export const VendorTypeLabels: Record<VendorType, string> = {
+  [VendorType.Subcontractor]: 'Subcontractor',
+  [VendorType.Supplier]: 'Supplier',
+  [VendorType.Consultant]: 'Consultant',
+  [VendorType.EquipmentRental]: 'Equipment Rental',
+  [VendorType.Other]: 'Other',
+};
+
+export interface VendorDto {
+  id: string;
+  name: string;
+  type: VendorType;
+  typeName: string;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  taxId?: string;
+  notes?: string;
+  createdById: string;
+  createdByName: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateVendorDto {
+  name: string;
+  type: VendorType;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  taxId?: string;
+  notes?: string;
+}
+
+export interface UpdateVendorDto {
+  name?: string;
+  type?: VendorType;
+  contactName?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  taxId?: string;
+  notes?: string;
+}
+
+// ============================================
+// Timesheet Types
+// ============================================
+
+export interface TimesheetDto {
+  id: string;
+  projectId: string;
+  projectName: string;
+  workerId: string;
+  workerName: string;
+  startDate: string;
+  endDate: string;
+  totalHours: number;
+  isApproved: boolean;
+  createdById: string;
+  createdByName: string;
+  approvedById?: string;
+  approvedByName?: string;
+  createdAt: string;
+  updatedAt?: string;
+  entries: TimesheetEntryDto[];
+}
+
+export interface TimesheetEntryDto {
+  id: string;
+  timesheetId: string;
+  date: string;
+  hours: number;
+  description?: string;
+  projectTaskId?: string;
+  projectTaskTitle?: string;
+}
+
+export interface CreateTimesheetDto {
+  projectId: string;
+  workerId: string;
+  startDate: string;
+  endDate: string;
+}
+
+export interface UpdateTimesheetDto {
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface CreateTimesheetEntryDto {
+  date: string;
+  hours: number;
+  description?: string;
+  projectTaskId?: string;
+}
+

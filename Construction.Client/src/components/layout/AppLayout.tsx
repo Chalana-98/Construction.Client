@@ -34,6 +34,10 @@ import BugReportIcon from '@mui/icons-material/BugReport';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
 import BoltIcon from '@mui/icons-material/Bolt';
+import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import StoreIcon from '@mui/icons-material/Store';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { logout } from '@/store/authSlice';
 
@@ -50,7 +54,11 @@ const navItems = [
   { path: '/materials', label: 'Materials', icon: <InventoryIcon /> },
   { path: '/documents', label: 'Documents', icon: <DescriptionIcon /> },
   { path: '/milestones', label: 'Milestones', icon: <FlagIcon /> },
-  { path: '/issues', label: 'Issues & RFIs', icon: <BugReportIcon /> },
+  { path: '/issues', label: 'Issues', icon: <BugReportIcon /> },
+  { path: '/rfis', label: 'RFIs', icon: <QuestionAnswerIcon /> },
+  { path: '/change-orders', label: 'Change Orders', icon: <EditNoteIcon /> },
+  { path: '/vendors', label: 'Vendors', icon: <StoreIcon /> },
+  { path: '/timesheets', label: 'Timesheets', icon: <AccessTimeIcon /> },
 ];
 
 export default function AppLayout() {

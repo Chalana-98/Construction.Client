@@ -15,6 +15,10 @@ import MilestonesPage from './features/milestones/MilestonesPage';
 import ProjectDetailPage from './features/projects/ProjectDetailPage';
 import TasksPage from './features/tasks/TasksPage';
 import TeamPage from './features/team/TeamPage';
+import RFIsPage from './features/rfis/RFIsPage';
+import ChangeOrdersPage from './features/change-orders/ChangeOrdersPage';
+import VendorsPage from './features/vendors/VendorsPage';
+import TimesheetsPage from './features/timesheets/TimesheetsPage';
 
 
 
@@ -44,6 +48,10 @@ export default function App() {
           <Route path="milestones" element={<MilestonesPage />} />
           <Route path="issues" element={<IssuesPage />} />
           <Route path="team" element={<TeamPage />} />
+          <Route path="rfis" element={<RFIsPage />} />
+          <Route path="change-orders" element={<ChangeOrdersPage />} />
+          <Route path="vendors" element={<VendorsPage />} />
+          <Route path="timesheets" element={<TimesheetsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -51,6 +51,10 @@ export const api = createApi({
     'Issues',
     'ProjectMembers',
     'Dashboard',
+    'RFIs',
+    'ChangeOrders',
+    'Vendors',
+    'Timesheets',
   ],
   endpoints: () => ({}),
 });
