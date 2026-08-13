@@ -19,6 +19,7 @@ import RFIsPage from './features/rfis/RFIsPage';
 import ChangeOrdersPage from './features/change-orders/ChangeOrdersPage';
 import VendorsPage from './features/vendors/VendorsPage';
 import TimesheetsPage from './features/timesheets/TimesheetsPage';
+import ProfilePage from './features/profile/ProfilePage';
 
 
 
@@ -52,6 +53,7 @@ export default function App() {
           <Route path="change-orders" element={<ChangeOrdersPage />} />
           <Route path="vendors" element={<VendorsPage />} />
           <Route path="timesheets" element={<TimesheetsPage />} />
+          <Route path="profile" element={<ProfilePage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

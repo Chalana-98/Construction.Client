@@ -55,6 +55,7 @@ export const api = createApi({
     'ChangeOrders',
     'Vendors',
     'Timesheets',
+    'Profile',
   ],
   endpoints: () => ({}),
 });

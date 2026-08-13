@@ -182,7 +182,7 @@ export default function AppLayout() {
               </Typography>
             </Box>
             <Divider />
-            <MenuItem onClick={() => { setAnchorEl(null); }}>
+            <MenuItem onClick={() => { setAnchorEl(null); navigate('/profile'); }}>
               <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
               Profile
             </MenuItem>
