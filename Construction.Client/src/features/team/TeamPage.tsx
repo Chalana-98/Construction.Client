@@ -12,6 +12,7 @@ import {
   useRemoveProjectMemberMutation, useDeactivateProjectMemberMutation,
   useReactivateProjectMemberMutation,
 } from '@/features/team/api';
+import { useGetProjectsQuery } from '@/features/projects/api';
 import type { ProjectMemberDto } from '@/types';
 import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -37,6 +38,7 @@ export default function TeamPage() {
     page, pageSize: 15,
     role: roleFilter || undefined,
   });
+  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 100 });
   const [addMember, { isLoading: adding }] = useAddProjectMemberMutation();
   const [removeMember, { isLoading: removing }] = useRemoveProjectMemberMutation();
   const [deactivate] = useDeactivateProjectMemberMutation();
@@ -192,7 +194,25 @@ export default function TeamPage() {
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ pt: 1 }}>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="Project ID" value={form.projectId} onChange={upd('projectId')} required helperText="Enter the project ID" />
+              {projectsData?.items && projectsData.items.length > 0 ? (
+                <TextField
+                  fullWidth
+                  select
+                  label="Project"
+                  value={form.projectId}
+                  onChange={upd('projectId')}
+                  required
+                  helperText="Select the project"
+                >
+                  {projectsData.items.map((p) => (
+                    <MenuItem key={p.id} value={p.id}>
+                      {p.name} ({p.projectCode})
+                    </MenuItem>
+                  ))}
+                </TextField>
+              ) : (
+                <TextField fullWidth label="Project ID" value={form.projectId} onChange={upd('projectId')} required helperText="Enter the project ID" />
+              )}
             </Grid>
             <Grid size={{ xs: 12 }}>
               <TextField fullWidth label="User ID" value={form.userId} onChange={upd('userId')} required helperText="Enter the user ID" />
