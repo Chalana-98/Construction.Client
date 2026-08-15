@@ -1,6 +1,7 @@
 import { api } from '@/store/api';
 import type {
   RFIDto,
+  RFICommentDto,
   CreateRFIDto,
   UpdateRFIDto,
   PagedResult,
@@ -23,9 +24,11 @@ export const rfisApi = api.injectEndpoints({
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('pageSize', String(pageSize));
-        if (projectId) params.set('projectId', projectId);
         if (status !== undefined) params.set('status', String(status));
         if (search) params.set('search', search);
+        if (projectId) {
+          return `/rfis/project/${projectId}?${params.toString()}`;
+        }
         return `/rfis?${params.toString()}`;
       },
       providesTags: ['RFIs'],
@@ -38,7 +41,7 @@ export const rfisApi = api.injectEndpoints({
 
     createRFI: builder.mutation<RFIDto, CreateRFIDto>({
       query: (body) => ({ url: '/rfis', method: 'POST', body }),
-      invalidatesTags: ['RFIs', 'Dashboard'],
+      invalidatesTags: ['RFIs', 'Dashboard', 'Projects'],
     }),
 
     updateRFI: builder.mutation<RFIDto, { id: string; data: UpdateRFIDto }>({
@@ -47,12 +50,30 @@ export const rfisApi = api.injectEndpoints({
         { type: 'RFIs', id },
         'RFIs',
         'Dashboard',
+        'Projects',
       ],
     }),
 
     deleteRFI: builder.mutation<void, string>({
       query: (id) => ({ url: `/rfis/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['RFIs', 'Dashboard'],
+      invalidatesTags: ['RFIs', 'Dashboard', 'Projects'],
+    }),
+
+    getRFIComments: builder.query<RFICommentDto[], string>({
+      query: (rfiId) => `/rfis/${rfiId}/comments`,
+      providesTags: (_result, _error, rfiId) => [{ type: 'RFIs', id: `${rfiId}-comments` }],
+    }),
+
+    addRFIComment: builder.mutation<RFICommentDto, { rfiId: string; content: string }>({
+      query: ({ rfiId, content }) => ({
+        url: `/rfis/${rfiId}/comments`,
+        method: 'POST',
+        body: JSON.stringify(content),
+      }),
+      invalidatesTags: (_result, _error, { rfiId }) => [
+        { type: 'RFIs', id: `${rfiId}-comments` },
+        { type: 'RFIs', id: rfiId },
+      ],
     }),
   }),
 });
@@ -63,4 +84,6 @@ export const {
   useCreateRFIMutation,
   useUpdateRFIMutation,
   useDeleteRFIMutation,
+  useGetRFICommentsQuery,
+  useAddRFICommentMutation,
 } = rfisApi;

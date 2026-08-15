@@ -10,14 +10,17 @@ export const projectMembersApi = api.injectEndpoints({
   endpoints: (builder) => ({
     getProjectMembers: builder.query<
       PagedResult<ProjectMemberDto>,
-      { projectId?: string; page?: number; pageSize?: number; role?: string }
+      { projectId?: string; page?: number; pageSize?: number; includeInactive?: boolean; role?: string }
     >({
-      query: ({ projectId, page = 1, pageSize = 20, role }) => {
+      query: ({ projectId, page = 1, pageSize = 20, includeInactive, role }) => {
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('pageSize', String(pageSize));
-        if (projectId) params.set('projectId', projectId);
+        if (includeInactive !== undefined) params.set('includeInactive', String(includeInactive));
         if (role) params.set('role', role);
+        if (projectId) {
+          return `/projectmembers/project/${projectId}?${params.toString()}`;
+        }
         return `/projectmembers?${params.toString()}`;
       },
       providesTags: ['ProjectMembers'],
@@ -41,6 +44,7 @@ export const projectMembersApi = api.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'ProjectMembers', id },
         'ProjectMembers',
+        'Projects',
       ],
     }),
 
@@ -50,18 +54,20 @@ export const projectMembersApi = api.injectEndpoints({
     }),
 
     deactivateProjectMember: builder.mutation<ProjectMemberDto, string>({
-      query: (id) => ({ url: `/projectmembers/${id}/deactivate`, method: 'PUT' }),
+      query: (id) => ({ url: `/projectmembers/${id}/deactivate`, method: 'POST' }),
       invalidatesTags: (_result, _error, id) => [
         { type: 'ProjectMembers', id },
         'ProjectMembers',
+        'Projects',
       ],
     }),
 
     reactivateProjectMember: builder.mutation<ProjectMemberDto, string>({
-      query: (id) => ({ url: `/projectmembers/${id}/reactivate`, method: 'PUT' }),
+      query: (id) => ({ url: `/projectmembers/${id}/reactivate`, method: 'POST' }),
       invalidatesTags: (_result, _error, id) => [
         { type: 'ProjectMembers', id },
         'ProjectMembers',
+        'Projects',
       ],
     }),
   }),

@@ -9,6 +9,7 @@ interface BreadcrumbItem {
 
 interface PageHeaderProps {
   readonly title: string;
+  readonly subtitle?: string;
   readonly breadcrumbs?: readonly BreadcrumbItem[];
   readonly actionLabel?: string;
   readonly onAction?: () => void;
@@ -17,6 +18,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({
   title,
+  subtitle,
   breadcrumbs,
   actionLabel,
   onAction,
@@ -47,9 +49,16 @@ export default function PageHeader({
         </Breadcrumbs>
       )}
       <Box display="flex" justifyContent="space-between" alignItems="center">
-        <Typography variant="h4" fontWeight={700}>
-          {title}
-        </Typography>
+        <Box>
+          <Typography variant="h4" fontWeight={700}>
+            {title}
+          </Typography>
+          {subtitle && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {subtitle}
+            </Typography>
+          )}
+        </Box>
         <Box display="flex" gap={1} alignItems="center">
           {children}
           {actionLabel && onAction && (

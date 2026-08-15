@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Box, Card, CardContent, Typography, TextField, Button, Avatar,
   Grid, Divider, Alert, Chip, Skeleton, IconButton, InputAdornment,
@@ -56,7 +56,7 @@ export default function ProfilePage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  useEffect(() => {
+  const handleStartEdit = () => {
     if (profile) {
       setForm({
         firstName: profile.firstName,
@@ -65,7 +65,8 @@ export default function ProfilePage() {
         jobTitle: profile.jobTitle ?? '',
       });
     }
-  }, [profile]);
+    setIsEditing(true);
+  };
 
   const handleUpdate = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -340,7 +341,7 @@ export default function ProfilePage() {
                 {!isEditing ? (
                   <Button
                     startIcon={<EditIcon />}
-                    onClick={() => setIsEditing(true)}
+                    onClick={handleStartEdit}
                     size="small"
                   >
                     Edit

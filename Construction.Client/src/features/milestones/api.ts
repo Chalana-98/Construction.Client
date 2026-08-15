@@ -16,7 +16,9 @@ export const milestonesApi = api.injectEndpoints({
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('pageSize', String(pageSize));
-        if (projectId) params.set('projectId', projectId);
+        if (projectId) {
+          return `/milestones/project/${projectId}?${params.toString()}`;
+        }
         return `/milestones?${params.toString()}`;
       },
       providesTags: ['Milestones'],
@@ -29,7 +31,7 @@ export const milestonesApi = api.injectEndpoints({
 
     createMilestone: builder.mutation<MilestoneDto, CreateMilestoneDto>({
       query: (body) => ({ url: '/milestones', method: 'POST', body }),
-      invalidatesTags: ['Milestones'],
+      invalidatesTags: ['Milestones', 'Projects'],
     }),
 
     updateMilestone: builder.mutation<MilestoneDto, { id: string; data: UpdateMilestoneDto }>({
@@ -39,16 +41,16 @@ export const milestonesApi = api.injectEndpoints({
 
     deleteMilestone: builder.mutation<void, string>({
       query: (id) => ({ url: `/milestones/${id}`, method: 'DELETE' }),
-      invalidatesTags: ['Milestones'],
+      invalidatesTags: ['Milestones', 'Projects'],
     }),
 
     completeMilestone: builder.mutation<MilestoneDto, string>({
-      query: (id) => ({ url: `/milestones/${id}/complete`, method: 'PUT' }),
+      query: (id) => ({ url: `/milestones/${id}/complete`, method: 'POST' }),
       invalidatesTags: (_result, _error, id) => [{ type: 'Milestones', id }, 'Milestones'],
     }),
 
     markPaymentReceived: builder.mutation<MilestoneDto, string>({
-      query: (id) => ({ url: `/milestones/${id}/payment-received`, method: 'PUT' }),
+      query: (id) => ({ url: `/milestones/${id}/payment-received`, method: 'POST' }),
       invalidatesTags: (_result, _error, id) => [{ type: 'Milestones', id }, 'Milestones'],
     }),
   }),

@@ -24,9 +24,11 @@ export const expensesApi = api.injectEndpoints({
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('pageSize', String(pageSize));
-        if (projectId) params.set('projectId', projectId);
         if (category !== undefined) params.set('category', String(category));
         if (isApproved !== undefined) params.set('isApproved', String(isApproved));
+        if (projectId) {
+          return `/expenses/project/${projectId}?${params.toString()}`;
+        }
         return `/expenses?${params.toString()}`;
       },
       providesTags: ['Expenses'],
@@ -57,13 +59,13 @@ export const expensesApi = api.injectEndpoints({
     }),
 
     approveExpense: builder.mutation<ExpenseDto, string>({
-      query: (id) => ({ url: `/expenses/${id}/approve`, method: 'PUT' }),
-      invalidatesTags: (_result, _error, id) => [{ type: 'Expenses', id }, 'Expenses'],
+      query: (id) => ({ url: `/expenses/${id}/approve`, method: 'POST' }),
+      invalidatesTags: (_result, _error, id) => [{ type: 'Expenses', id }, 'Expenses', 'Projects'],
     }),
 
     markExpensePaid: builder.mutation<ExpenseDto, string>({
-      query: (id) => ({ url: `/expenses/${id}/mark-paid`, method: 'PUT' }),
-      invalidatesTags: (_result, _error, id) => [{ type: 'Expenses', id }, 'Expenses'],
+      query: (id) => ({ url: `/expenses/${id}/mark-paid`, method: 'POST' }),
+      invalidatesTags: (_result, _error, id) => [{ type: 'Expenses', id }, 'Expenses', 'Projects'],
     }),
 
     getExpenseSummary: builder.query<ExpenseSummaryDto, string>({

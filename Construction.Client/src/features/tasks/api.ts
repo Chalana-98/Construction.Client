@@ -15,7 +15,7 @@ export const tasksApi = api.injectEndpoints({
     getTasks: builder.query<
       PagedResult<TaskListDto>,
       {
-        projectId: string;
+        projectId?: string;
         page?: number;
         pageSize?: number;
         status?: TaskStatus;
@@ -30,7 +30,10 @@ export const tasksApi = api.injectEndpoints({
         if (status !== undefined) params.set('status', String(status));
         if (priority !== undefined) params.set('priority', String(priority));
         if (assignedToId) params.set('assignedToId', assignedToId);
-        return `/tasks/project/${projectId}?${params.toString()}`;
+        if (projectId) {
+          return `/tasks/project/${projectId}?${params.toString()}`;
+        }
+        return `/tasks?${params.toString()}`;
       },
       providesTags: ['Tasks'],
     }),

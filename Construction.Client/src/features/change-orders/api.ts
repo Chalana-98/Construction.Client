@@ -23,26 +23,28 @@ export const changeOrdersApi = api.injectEndpoints({
         const params = new URLSearchParams();
         params.set('page', String(page));
         params.set('pageSize', String(pageSize));
-        if (projectId) params.set('projectId', projectId);
         if (status !== undefined) params.set('status', String(status));
         if (search) params.set('search', search);
-        return `/change-orders?${params.toString()}`;
+        if (projectId) {
+          return `/changeorders/project/${projectId}?${params.toString()}`;
+        }
+        return `/changeorders?${params.toString()}`;
       },
       providesTags: ['ChangeOrders'],
     }),
 
     getChangeOrder: builder.query<ChangeOrderDto, string>({
-      query: (id) => `/change-orders/${id}`,
+      query: (id) => `/changeorders/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'ChangeOrders', id }],
     }),
 
     createChangeOrder: builder.mutation<ChangeOrderDto, CreateChangeOrderDto>({
-      query: (body) => ({ url: '/change-orders', method: 'POST', body }),
+      query: (body) => ({ url: '/changeorders', method: 'POST', body }),
       invalidatesTags: ['ChangeOrders', 'Projects', 'Dashboard'],
     }),
 
     updateChangeOrder: builder.mutation<ChangeOrderDto, { id: string; data: UpdateChangeOrderDto }>({
-      query: ({ id, data }) => ({ url: `/change-orders/${id}`, method: 'PUT', body: data }),
+      query: ({ id, data }) => ({ url: `/changeorders/${id}`, method: 'PUT', body: data }),
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'ChangeOrders', id },
         'ChangeOrders',
@@ -51,7 +53,7 @@ export const changeOrdersApi = api.injectEndpoints({
     }),
 
     approveChangeOrder: builder.mutation<ChangeOrderDto, string>({
-      query: (id) => ({ url: `/change-orders/${id}/approve`, method: 'POST' }),
+      query: (id) => ({ url: `/changeorders/${id}/approve`, method: 'PATCH' }),
       invalidatesTags: (_result, _error, id) => [
         { type: 'ChangeOrders', id },
         'ChangeOrders',
@@ -61,15 +63,17 @@ export const changeOrdersApi = api.injectEndpoints({
     }),
 
     rejectChangeOrder: builder.mutation<ChangeOrderDto, string>({
-      query: (id) => ({ url: `/change-orders/${id}/reject`, method: 'POST' }),
+      query: (id) => ({ url: `/changeorders/${id}/reject`, method: 'PATCH' }),
       invalidatesTags: (_result, _error, id) => [
         { type: 'ChangeOrders', id },
         'ChangeOrders',
+        'Projects',
+        'Dashboard',
       ],
     }),
 
     deleteChangeOrder: builder.mutation<void, string>({
-      query: (id) => ({ url: `/change-orders/${id}`, method: 'DELETE' }),
+      query: (id) => ({ url: `/changeorders/${id}`, method: 'DELETE' }),
       invalidatesTags: ['ChangeOrders', 'Projects', 'Dashboard'],
     }),
   }),
