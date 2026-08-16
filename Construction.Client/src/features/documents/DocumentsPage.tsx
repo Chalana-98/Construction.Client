@@ -15,6 +15,8 @@ import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import DescriptionIcon from '@mui/icons-material/Description';
 import { useSnackbar } from 'notistack';
 
 export default function DocumentsPage() {
@@ -46,72 +48,82 @@ export default function DocumentsPage() {
 
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
+  const hasItems = Boolean(data?.items && data.items.length > 0);
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
       <PageHeader title="Documents" />
-      <Box display="flex" gap={2} mb={3}>
-        <TextField size="small" select label="Type" value={typeFilter}
-          onChange={(e) => { setTypeFilter(e.target.value as DocumentType | ''); setPage(1); }}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="">All</MenuItem>
-          {Object.entries(DocumentTypeLabels).map(([v, l]) => (
-            <MenuItem key={v} value={v}>{l}</MenuItem>
-          ))}
-        </TextField>
-      </Box>
+      {(hasItems || typeFilter) && (
+        <Box display="flex" gap={2} mb={3}>
+          <TextField size="small" select label="Type" value={typeFilter}
+            onChange={(e) => { setTypeFilter(e.target.value as DocumentType | ''); setPage(1); }}
+            sx={{ minWidth: 160 }}
+          >
+            <MenuItem value="">All</MenuItem>
+            {Object.entries(DocumentTypeLabels).map(([v, l]) => (
+              <MenuItem key={v} value={v}>{l}</MenuItem>
+            ))}
+          </TextField>
+        </Box>
+      )}
 
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>File</TableCell>
-                <TableCell>Uploaded By</TableCell>
-                <TableCell>Version</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data?.items.map((doc) => (
-                <TableRow key={doc.id} hover>
-                  <TableCell><Typography fontWeight={500}>{doc.name}</Typography></TableCell>
-                  <TableCell><Chip label={doc.typeName} size="small" variant="outlined" /></TableCell>
-                  <TableCell><Typography variant="body2" color="text.secondary">{doc.fileName}</Typography></TableCell>
-                  <TableCell>{doc.uploadedByName}</TableCell>
-                  <TableCell>v{doc.version}</TableCell>
-                  <TableCell>{new Date(doc.createdAt).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Chip label={doc.isArchived ? 'Archived' : 'Active'} size="small"
-                      color={doc.isArchived ? 'default' : 'success'} variant="outlined" />
-                  </TableCell>
-                  <TableCell align="right">
-                    {doc.isArchived ? (
-                      <Tooltip title="Restore"><IconButton size="small" color="primary" onClick={() => handleRestore(doc.id)}>
-                        <UnarchiveIcon fontSize="small" /></IconButton></Tooltip>
-                    ) : (
-                      <Tooltip title="Archive"><IconButton size="small" onClick={() => handleArchive(doc.id)}>
-                        <ArchiveIcon fontSize="small" /></IconButton></Tooltip>
-                    )}
-                    <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => setDeleteId(doc.id)}>
-                      <DeleteIcon fontSize="small" /></IconButton></Tooltip>
-                  </TableCell>
+      {hasItems && (
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>File</TableCell>
+                  <TableCell>Uploaded By</TableCell>
+                  <TableCell>Version</TableCell>
+                  <TableCell>Date</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))}
-              {(!data?.items || data.items.length === 0) && (
-                <TableRow><TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                  <Typography color="text.secondary">No documents found</Typography>
-                </TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+              </TableHead>
+              <TableBody>
+                {data?.items.map((doc) => (
+                  <TableRow key={doc.id} hover>
+                    <TableCell><Typography fontWeight={500}>{doc.name}</Typography></TableCell>
+                    <TableCell><Chip label={doc.typeName} size="small" variant="outlined" /></TableCell>
+                    <TableCell><Typography variant="body2" color="text.secondary">{doc.fileName}</Typography></TableCell>
+                    <TableCell>{doc.uploadedByName}</TableCell>
+                    <TableCell>v{doc.version}</TableCell>
+                    <TableCell>{new Date(doc.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Chip label={doc.isArchived ? 'Archived' : 'Active'} size="small"
+                        color={doc.isArchived ? 'default' : 'success'} variant="outlined" />
+                    </TableCell>
+                    <TableCell align="right">
+                      {doc.isArchived ? (
+                        <Tooltip title="Restore"><IconButton size="small" color="primary" onClick={() => handleRestore(doc.id)}>
+                          <UnarchiveIcon fontSize="small" /></IconButton></Tooltip>
+                      ) : (
+                        <Tooltip title="Archive"><IconButton size="small" onClick={() => handleArchive(doc.id)}>
+                          <ArchiveIcon fontSize="small" /></IconButton></Tooltip>
+                      )}
+                      <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => setDeleteId(doc.id)}>
+                        <DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {!hasItems && (
+        <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            icon={<DescriptionIcon />}
+            title="No documents yet!"
+            description="Upload blueprints, site contracts, engineering specs, and safety certificates."
+          />
+        </Card>
+      )}
       {data && data.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination count={data.totalPages} page={page} onChange={(_e, v) => setPage(v)} color="primary" />

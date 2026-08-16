@@ -15,6 +15,8 @@ import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { useSnackbar } from 'notistack';
 
 const emptyForm = { projectId: '', workerId: '', startDate: '', endDate: '' };
@@ -57,62 +59,77 @@ export default function TimesheetsPage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
 
-  return (
-    <Box>
-      <PageHeader title="Timesheets" actionLabel="New Timesheet" onAction={() => { setForm(emptyForm); setFormOpen(true); }} />
+  const hasItems = Boolean(data?.items && data.items.length > 0);
 
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Worker</TableCell>
-                <TableCell>Project</TableCell>
-                <TableCell>Period</TableCell>
-                <TableCell>Total Hours</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data?.items.map((t) => (
-                <TableRow key={t.id} hover>
-                  <TableCell><Typography fontWeight={500}>{t.workerName}</Typography></TableCell>
-                  <TableCell>{t.projectName}</TableCell>
-                  <TableCell>{new Date(t.startDate).toLocaleDateString()} - {new Date(t.endDate).toLocaleDateString()}</TableCell>
-                  <TableCell>{t.totalHours} hrs</TableCell>
-                  <TableCell>
-                    <Chip 
-                      label={t.isApproved ? 'Approved' : 'Pending'} 
-                      size="small" 
-                      color={t.isApproved ? 'success' : 'warning'} 
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    {!t.isApproved && (
-                      <Tooltip title="Approve">
-                        <IconButton size="small" color="success" onClick={() => handleApprove(t.id)}>
-                          <CheckCircleIcon fontSize="small" />
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
+      <PageHeader
+        title="Timesheets"
+        actionLabel={hasItems ? "New Timesheet" : undefined}
+        onAction={hasItems ? () => { setForm(emptyForm); setFormOpen(true); } : undefined}
+      />
+
+      {hasItems && (
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Worker</TableCell>
+                  <TableCell>Project</TableCell>
+                  <TableCell>Period</TableCell>
+                  <TableCell>Total Hours</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {data?.items.map((t) => (
+                  <TableRow key={t.id} hover>
+                    <TableCell><Typography fontWeight={500}>{t.workerName}</Typography></TableCell>
+                    <TableCell>{t.projectName}</TableCell>
+                    <TableCell>{new Date(t.startDate).toLocaleDateString()} - {new Date(t.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{t.totalHours} hrs</TableCell>
+                    <TableCell>
+                      <Chip 
+                        label={t.isApproved ? 'Approved' : 'Pending'} 
+                        size="small" 
+                        color={t.isApproved ? 'success' : 'warning'} 
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      {!t.isApproved && (
+                        <Tooltip title="Approve">
+                          <IconButton size="small" color="success" onClick={() => handleApprove(t.id)}>
+                            <CheckCircleIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Delete">
+                        <IconButton size="small" color="error" onClick={() => { setSelected(t); setDeleteOpen(true); }}>
+                          <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                    )}
-                    <Tooltip title="Delete">
-                      <IconButton size="small" color="error" onClick={() => { setSelected(t); setDeleteOpen(true); }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(!data?.items || data.items.length === 0) && (
-                <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                  <Typography color="text.secondary">No timesheets found</Typography>
-                </TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {!hasItems && (
+        <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            icon={<AccessTimeIcon />}
+            title="No timesheets submitted yet!"
+            description="Record labor shifts, worker hours, and wage allocations for payroll review."
+            actionLabel="New Timesheet"
+            onAction={() => { setForm(emptyForm); setFormOpen(true); }}
+          />
+        </Card>
+      )}
       {data && data.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination count={data.totalPages} page={page} onChange={(_e, val) => setPage(val)} color="primary" />

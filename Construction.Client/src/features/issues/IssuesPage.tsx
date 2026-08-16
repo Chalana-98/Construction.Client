@@ -19,6 +19,8 @@ import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import { useSnackbar } from 'notistack';
 
 const emptyForm = { projectId: '', title: '', description: '', type: IssueType.General, priority: IssuePriority.Medium, location: '', notes: '' };
@@ -61,66 +63,83 @@ export default function IssuesPage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
 
-  return (
-    <Box>
-      <PageHeader title="Issues & RFIs" actionLabel="Report Issue" onAction={() => { setForm(emptyForm); setFormOpen(true); }} />
-      <Box display="flex" gap={2} mb={3} flexWrap="wrap">
-        <TextField size="small" select label="Status" value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as IssueStatus | ''); setPage(1); }}
-          sx={{ minWidth: 150 }}
-        >
-          <MenuItem value="">All</MenuItem>
-          {Object.entries(IssueStatusLabels).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
-        </TextField>
-        <TextField size="small" select label="Type" value={typeFilter}
-          onChange={(e) => { setTypeFilter(e.target.value as IssueType | ''); setPage(1); }}
-          sx={{ minWidth: 150 }}
-        >
-          <MenuItem value="">All</MenuItem>
-          {Object.entries(IssueTypeLabels).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
-        </TextField>
-      </Box>
+  const hasItems = Boolean(data?.items && data.items.length > 0);
 
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Issue #</TableCell>
-                <TableCell>Title</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Priority</TableCell>
-                <TableCell>Assigned To</TableCell>
-                <TableCell>Due Date</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data?.items.map((issue) => (
-                <TableRow key={issue.id} hover>
-                  <TableCell><Chip label={issue.issueNumber} size="small" variant="outlined" /></TableCell>
-                  <TableCell><Typography fontWeight={500}>{issue.title}</Typography></TableCell>
-                  <TableCell><Chip label={issue.typeName} size="small" /></TableCell>
-                  <TableCell><StatusChip type="issueStatus" value={issue.status} /></TableCell>
-                  <TableCell><PriorityChip value={issue.priority} /></TableCell>
-                  <TableCell>{issue.assignedToName ?? 'Unassigned'}</TableCell>
-                  <TableCell>{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : '—'}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(issue); setDeleteOpen(true); }}>
-                      <DeleteIcon fontSize="small" /></IconButton></Tooltip>
-                  </TableCell>
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
+      <PageHeader
+        title="Issues & RFIs"
+        actionLabel={hasItems ? "Report Issue" : undefined}
+        onAction={hasItems ? () => { setForm(emptyForm); setFormOpen(true); } : undefined}
+      />
+      {(hasItems || statusFilter || typeFilter) && (
+        <Box display="flex" gap={2} mb={3} flexWrap="wrap">
+          <TextField size="small" select label="Status" value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value as IssueStatus | ''); setPage(1); }}
+            sx={{ minWidth: 150 }}
+          >
+            <MenuItem value="">All</MenuItem>
+            {Object.entries(IssueStatusLabels).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
+          </TextField>
+          <TextField size="small" select label="Type" value={typeFilter}
+            onChange={(e) => { setTypeFilter(e.target.value as IssueType | ''); setPage(1); }}
+            sx={{ minWidth: 150 }}
+          >
+            <MenuItem value="">All</MenuItem>
+            {Object.entries(IssueTypeLabels).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
+          </TextField>
+        </Box>
+      )}
+
+      {hasItems && (
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Issue #</TableCell>
+                  <TableCell>Title</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Priority</TableCell>
+                  <TableCell>Assigned To</TableCell>
+                  <TableCell>Due Date</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))}
-              {(!data?.items || data.items.length === 0) && (
-                <TableRow><TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                  <Typography color="text.secondary">No issues found</Typography>
-                </TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+              </TableHead>
+              <TableBody>
+                {data?.items.map((issue) => (
+                  <TableRow key={issue.id} hover>
+                    <TableCell><Chip label={issue.issueNumber} size="small" variant="outlined" /></TableCell>
+                    <TableCell><Typography fontWeight={500}>{issue.title}</Typography></TableCell>
+                    <TableCell><Chip label={issue.typeName} size="small" /></TableCell>
+                    <TableCell><StatusChip type="issueStatus" value={issue.status} /></TableCell>
+                    <TableCell><PriorityChip value={issue.priority} /></TableCell>
+                    <TableCell>{issue.assignedToName ?? 'Unassigned'}</TableCell>
+                    <TableCell>{issue.dueDate ? new Date(issue.dueDate).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(issue); setDeleteOpen(true); }}>
+                        <DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {!hasItems && (
+        <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            icon={<ReportProblemIcon />}
+            title="No issues or defects reported!"
+            description="Log safety inspections, structural inquiries, and punchlist items."
+            actionLabel="Report Issue"
+            onAction={() => { setForm(emptyForm); setFormOpen(true); }}
+          />
+        </Card>
+      )}
       {data && data.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination count={data.totalPages} page={page} onChange={(_e, v) => setPage(v)} color="primary" />

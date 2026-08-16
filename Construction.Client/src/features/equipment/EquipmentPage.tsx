@@ -17,6 +17,8 @@ import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
 import { useSnackbar } from 'notistack';
 
 const emptyForm = { name: '', equipmentCode: '', category: '', manufacturer: '', model: '', serialNumber: '', currentLocation: '', notes: '' };
@@ -78,60 +80,77 @@ export default function EquipmentPage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
 
-  return (
-    <Box>
-      <PageHeader title="Equipment" actionLabel="Add Equipment" onAction={openCreate} />
-      <Box display="flex" gap={2} mb={3}>
-        <TextField size="small" select label="Status" value={statusFilter}
-          onChange={(e) => { setStatusFilter(e.target.value as EquipmentStatus | ''); setPage(1); }}
-          sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="">All</MenuItem>
-          {Object.entries(EquipmentStatusLabels).map(([v, l]) => (
-            <MenuItem key={v} value={v}>{l}</MenuItem>
-          ))}
-        </TextField>
-      </Box>
+  const hasItems = Boolean(data?.items && data.items.length > 0);
 
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Code</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Location</TableCell>
-                <TableCell>Manufacturer</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data?.items.map((eq) => (
-                <TableRow key={eq.id} hover>
-                  <TableCell><Typography fontWeight={500}>{eq.name}</Typography></TableCell>
-                  <TableCell><Chip label={eq.equipmentCode} size="small" variant="outlined" /></TableCell>
-                  <TableCell>{eq.category}</TableCell>
-                  <TableCell><StatusChip type="equipmentStatus" value={eq.status} /></TableCell>
-                  <TableCell>{eq.currentLocation ?? '—'}</TableCell>
-                  <TableCell>{[eq.manufacturer, eq.model].filter(Boolean).join(' ') || '—'}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(eq)}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                    <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(eq); setDeleteOpen(true); }}>
-                      <DeleteIcon fontSize="small" /></IconButton></Tooltip>
-                  </TableCell>
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
+      <PageHeader
+        title="Equipment"
+        actionLabel={hasItems ? "Add Equipment" : undefined}
+        onAction={hasItems ? openCreate : undefined}
+      />
+      {(hasItems || statusFilter) && (
+        <Box display="flex" gap={2} mb={3}>
+          <TextField size="small" select label="Status" value={statusFilter}
+            onChange={(e) => { setStatusFilter(e.target.value as EquipmentStatus | ''); setPage(1); }}
+            sx={{ minWidth: 160 }}
+          >
+            <MenuItem value="">All</MenuItem>
+            {Object.entries(EquipmentStatusLabels).map(([v, l]) => (
+              <MenuItem key={v} value={v}>{l}</MenuItem>
+            ))}
+          </TextField>
+        </Box>
+      )}
+
+      {hasItems && (
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Code</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Location</TableCell>
+                  <TableCell>Manufacturer</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))}
-              {(!data?.items || data.items.length === 0) && (
-                <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                  <Typography color="text.secondary">No equipment found</Typography>
-                </TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+              </TableHead>
+              <TableBody>
+                {data?.items.map((eq) => (
+                  <TableRow key={eq.id} hover>
+                    <TableCell><Typography fontWeight={500}>{eq.name}</Typography></TableCell>
+                    <TableCell><Chip label={eq.equipmentCode} size="small" variant="outlined" /></TableCell>
+                    <TableCell>{eq.category}</TableCell>
+                    <TableCell><StatusChip type="equipmentStatus" value={eq.status} /></TableCell>
+                    <TableCell>{eq.currentLocation ?? '—'}</TableCell>
+                    <TableCell>{[eq.manufacturer, eq.model].filter(Boolean).join(' ') || '—'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(eq)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                      <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(eq); setDeleteOpen(true); }}>
+                        <DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {!hasItems && (
+        <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            icon={<PrecisionManufacturingIcon />}
+            title="No equipment registered yet!"
+            description="Register cranes, excavators, lifts, and machinery to track fleet deployment."
+            actionLabel="Add Equipment"
+            onAction={openCreate}
+          />
+        </Card>
+      )}
       {data && data.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination count={data.totalPages} page={page} onChange={(_e, v) => setPage(v)} color="primary" />

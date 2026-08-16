@@ -18,6 +18,8 @@ import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import FlagIcon from '@mui/icons-material/Flag';
 import { useSnackbar } from 'notistack';
 
 const emptyForm = { name: '', description: '', dueDate: '', paymentAmount: 0, notes: '', projectId: '' };
@@ -67,73 +69,89 @@ export default function MilestonesPage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
 
+  const hasItems = Boolean(data?.items && data.items.length > 0);
+
   return (
-    <Box>
-      <PageHeader title="Milestones" actionLabel="Add Milestone" onAction={openCreate} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
+      <PageHeader
+        title="Milestones"
+        actionLabel={hasItems ? "Add Milestone" : undefined}
+        onAction={hasItems ? openCreate : undefined}
+      />
 
-      <Grid container spacing={3}>
-        {data?.items.map((m) => {
-          const progress = m.taskCount > 0 ? Math.round((m.completedTaskCount / m.taskCount) * 100) : 0;
-          return (
-            <Grid key={m.id} size={{ xs: 12, sm: 6, md: 4 }}>
-              <Card sx={{ height: '100%' }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
-                    <Typography variant="h6" fontWeight={600}>{m.name}</Typography>
-                    <Chip label={m.isCompleted ? 'Completed' : 'Pending'} size="small"
-                      color={m.isCompleted ? 'success' : 'warning'} variant="outlined" />
-                  </Box>
-                  {m.description && (
-                    <Typography variant="body2" color="text.secondary" mb={1}>{m.description}</Typography>
-                  )}
-                  <Typography variant="body2" mb={0.5}>
-                    Due: {new Date(m.dueDate).toLocaleDateString()}
-                  </Typography>
-                  {m.paymentAmount != null && m.paymentAmount > 0 && (
-                    <Box display="flex" alignItems="center" gap={0.5} mb={1}>
-                      <Typography variant="body2" fontWeight={600} color="primary">
-                        ${m.paymentAmount.toLocaleString()}
-                      </Typography>
-                      {m.paymentReceived && <Chip label="Received" size="small" color="success" />}
+      {hasItems && (
+        <Grid container spacing={3}>
+          {data?.items.map((m) => {
+            const progress = m.taskCount > 0 ? Math.round((m.completedTaskCount / m.taskCount) * 100) : 0;
+            return (
+              <Grid key={m.id} size={{ xs: 12, sm: 6, md: 4 }}>
+                <Card sx={{ height: '100%' }}>
+                  <CardContent sx={{ p: 3 }}>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={1}>
+                      <Typography variant="h6" fontWeight={600}>{m.name}</Typography>
+                      <Chip label={m.isCompleted ? 'Completed' : 'Pending'} size="small"
+                        color={m.isCompleted ? 'success' : 'warning'} variant="outlined" />
                     </Box>
-                  )}
-                  <Box mb={1}>
-                    <Box display="flex" justifyContent="space-between" mb={0.5}>
-                      <Typography variant="caption">Tasks: {m.completedTaskCount}/{m.taskCount}</Typography>
-                      <Typography variant="caption">{progress}%</Typography>
+                    {m.description && (
+                      <Typography variant="body2" color="text.secondary" mb={1}>{m.description}</Typography>
+                    )}
+                    <Typography variant="body2" mb={0.5}>
+                      Due: {new Date(m.dueDate).toLocaleDateString()}
+                    </Typography>
+                    {m.paymentAmount != null && m.paymentAmount > 0 && (
+                      <Box display="flex" alignItems="center" gap={0.5} mb={1}>
+                        <Typography variant="body2" fontWeight={600} color="primary">
+                          ${m.paymentAmount.toLocaleString()}
+                        </Typography>
+                        {m.paymentReceived && <Chip label="Received" size="small" color="success" />}
+                      </Box>
+                    )}
+                    <Box mb={1}>
+                      <Box display="flex" justifyContent="space-between" mb={0.5}>
+                        <Typography variant="caption">Tasks: {m.completedTaskCount}/{m.taskCount}</Typography>
+                        <Typography variant="caption">{progress}%</Typography>
+                      </Box>
+                      <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3 }} />
                     </Box>
-                    <LinearProgress variant="determinate" value={progress} sx={{ height: 6, borderRadius: 3 }} />
-                  </Box>
-                  <Box display="flex" justifyContent="flex-end" gap={0.5} mt={1}>
-                    {!m.isCompleted && (
-                      <Tooltip title="Mark Complete">
-                        <IconButton size="small" color="success" onClick={async () => {
-                          try { await completeMilestone(m.id).unwrap(); enqueueSnackbar('Completed', { variant: 'success' }); }
-                          catch { enqueueSnackbar('Failed', { variant: 'error' }); }
-                        }}><CheckCircleIcon fontSize="small" /></IconButton>
-                      </Tooltip>
-                    )}
-                    {m.paymentAmount != null && m.paymentAmount > 0 && !m.paymentReceived && (
-                      <Tooltip title="Payment Received">
-                        <IconButton size="small" color="primary" onClick={async () => {
-                          try { await markPayment(m.id).unwrap(); enqueueSnackbar('Payment marked', { variant: 'success' }); }
-                          catch { enqueueSnackbar('Failed', { variant: 'error' }); }
-                        }}><PaidIcon fontSize="small" /></IconButton>
-                      </Tooltip>
-                    )}
-                    <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                    <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}>
-                      <DeleteIcon fontSize="small" /></IconButton></Tooltip>
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          );
-        })}
-      </Grid>
+                    <Box display="flex" justifyContent="flex-end" gap={0.5} mt={1}>
+                      {!m.isCompleted && (
+                        <Tooltip title="Mark Complete">
+                          <IconButton size="small" color="success" onClick={async () => {
+                            try { await completeMilestone(m.id).unwrap(); enqueueSnackbar('Completed', { variant: 'success' }); }
+                            catch { enqueueSnackbar('Failed', { variant: 'error' }); }
+                          }}><CheckCircleIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                      )}
+                      {m.paymentAmount != null && m.paymentAmount > 0 && !m.paymentReceived && (
+                        <Tooltip title="Payment Received">
+                          <IconButton size="small" color="primary" onClick={async () => {
+                            try { await markPayment(m.id).unwrap(); enqueueSnackbar('Payment marked', { variant: 'success' }); }
+                            catch { enqueueSnackbar('Failed', { variant: 'error' }); }
+                          }}><PaidIcon fontSize="small" /></IconButton>
+                        </Tooltip>
+                      )}
+                      <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                      <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}>
+                        <DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
 
-      {(!data?.items || data.items.length === 0) && (
-        <Box textAlign="center" py={8}><Typography color="text.secondary">No milestones found</Typography></Box>
+      {!hasItems && (
+        <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            icon={<FlagIcon />}
+            title="No milestones yet!"
+            description="Create milestone checkpoints to track project phases and payment collections."
+            actionLabel="Add Milestone"
+            onAction={openCreate}
+          />
+        </Card>
       )}
 
       {data && data.totalPages > 1 && (

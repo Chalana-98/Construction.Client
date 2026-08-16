@@ -17,6 +17,8 @@ import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import StorefrontIcon from '@mui/icons-material/Storefront';
 import { useSnackbar } from 'notistack';
 
 const emptyForm = { name: '', type: VendorType.Subcontractor, contactName: '', email: '', phone: '', address: '', taxId: '', notes: '' };
@@ -53,46 +55,61 @@ export default function VendorsPage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
 
-  return (
-    <Box>
-      <PageHeader title="Vendors & Directory" actionLabel="Add Vendor" onAction={() => { setForm(emptyForm); setFormOpen(true); }} />
+  const hasItems = Boolean(data?.items && data.items.length > 0);
 
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Contact Person</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Phone</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data?.items.map((v) => (
-                <TableRow key={v.id} hover>
-                  <TableCell><Typography fontWeight={500}>{v.name}</Typography></TableCell>
-                  <TableCell><Chip label={v.typeName} size="small" variant="outlined" color="primary" /></TableCell>
-                  <TableCell>{v.contactName || '—'}</TableCell>
-                  <TableCell>{v.email || '—'}</TableCell>
-                  <TableCell>{v.phone || '—'}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(v); setDeleteOpen(true); }}>
-                      <DeleteIcon fontSize="small" /></IconButton></Tooltip>
-                  </TableCell>
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
+      <PageHeader
+        title="Vendors & Directory"
+        actionLabel={hasItems ? "Add Vendor" : undefined}
+        onAction={hasItems ? () => { setForm(emptyForm); setFormOpen(true); } : undefined}
+      />
+
+      {hasItems && (
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Contact Person</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Phone</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))}
-              {(!data?.items || data.items.length === 0) && (
-                <TableRow><TableCell colSpan={6} align="center" sx={{ py: 6 }}>
-                  <Typography color="text.secondary">No vendors found</Typography>
-                </TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+              </TableHead>
+              <TableBody>
+                {data?.items.map((v) => (
+                  <TableRow key={v.id} hover>
+                    <TableCell><Typography fontWeight={500}>{v.name}</Typography></TableCell>
+                    <TableCell><Chip label={v.typeName} size="small" variant="outlined" color="primary" /></TableCell>
+                    <TableCell>{v.contactName || '—'}</TableCell>
+                    <TableCell>{v.email || '—'}</TableCell>
+                    <TableCell>{v.phone || '—'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(v); setDeleteOpen(true); }}>
+                        <DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {!hasItems && (
+        <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            icon={<StorefrontIcon />}
+            title="No vendors or suppliers yet!"
+            description="Add subcontractors, material suppliers, and equipment rental vendors to your directory."
+            actionLabel="Add Vendor"
+            onAction={() => { setForm(emptyForm); setFormOpen(true); }}
+          />
+        </Card>
+      )}
       {data && data.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination count={data.totalPages} page={page} onChange={(_e, val) => setPage(val)} color="primary" />

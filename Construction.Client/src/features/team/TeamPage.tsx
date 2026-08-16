@@ -18,6 +18,8 @@ import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import GroupIcon from '@mui/icons-material/Group';
 import { useSnackbar } from 'notistack';
 
 const ROLES = ['Viewer', 'Worker', 'Manager', 'Admin'];
@@ -98,89 +100,104 @@ export default function TeamPage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
 
+  const hasItems = Boolean(data?.items && data.items.length > 0);
+
   return (
-    <Box>
-      <PageHeader title="Team Members" actionLabel="Add Member" onAction={() => { setForm(emptyForm); setFormOpen(true); }} />
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
+      <PageHeader
+        title="Team Members"
+        actionLabel={hasItems ? "Add Member" : undefined}
+        onAction={hasItems ? () => { setForm(emptyForm); setFormOpen(true); } : undefined}
+      />
 
-      <Box display="flex" gap={2} mb={3}>
-        <TextField
-          size="small" select label="Role" value={roleFilter}
-          onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          sx={{ minWidth: 150 }}
-        >
-          <MenuItem value="">All Roles</MenuItem>
-          {ROLES.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
-        </TextField>
-      </Box>
+      {(hasItems || roleFilter) && (
+        <Box display="flex" gap={2} mb={3}>
+          <TextField
+            size="small" select label="Role" value={roleFilter}
+            onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
+            sx={{ minWidth: 150 }}
+          >
+            <MenuItem value="">All Roles</MenuItem>
+            {ROLES.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
+          </TextField>
+        </Box>
+      )}
 
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Member</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Job Title</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell>Daily Rate</TableCell>
-                <TableCell>Joined</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data?.items.map((m) => (
-                <TableRow key={m.id} hover sx={{ opacity: m.isActive ? 1 : 0.6 }}>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={1.5}>
-                      <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>
-                        {m.userName?.charAt(0).toUpperCase() ?? '?'}
-                      </Avatar>
-                      <Typography fontWeight={500}>{m.userName}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{m.userEmail}</TableCell>
-                  <TableCell>{m.userJobTitle ?? '—'}</TableCell>
-                  <TableCell>
-                    <Chip label={m.role} size="small" color={roleColor[m.role] ?? 'default'} />
-                  </TableCell>
-                  <TableCell>
-                    {m.dailyRate ? `$${m.dailyRate.toLocaleString()}` : '—'}
-                  </TableCell>
-                  <TableCell>{new Date(m.joinedDate).toLocaleDateString()}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={m.isActive ? 'Active' : 'Inactive'}
-                      size="small"
-                      color={m.isActive ? 'success' : 'default'}
-                      variant={m.isActive ? 'filled' : 'outlined'}
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title={m.isActive ? 'Deactivate' : 'Reactivate'}>
-                      <IconButton size="small" onClick={() => handleToggleActive(m)}>
-                        {m.isActive ? <PersonOffIcon fontSize="small" /> : <PersonIcon fontSize="small" color="success" />}
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Remove">
-                      <IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(!data?.items || data.items.length === 0) && (
+      {hasItems && (
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
                 <TableRow>
-                  <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                    <Typography color="text.secondary">No team members found</Typography>
-                  </TableCell>
+                  <TableCell>Member</TableCell>
+                  <TableCell>Email</TableCell>
+                  <TableCell>Job Title</TableCell>
+                  <TableCell>Role</TableCell>
+                  <TableCell>Daily Rate</TableCell>
+                  <TableCell>Joined</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+              </TableHead>
+              <TableBody>
+                {data?.items.map((m) => (
+                  <TableRow key={m.id} hover sx={{ opacity: m.isActive ? 1 : 0.6 }}>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1.5}>
+                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>
+                          {m.userName?.charAt(0).toUpperCase() ?? '?'}
+                        </Avatar>
+                        <Typography fontWeight={500}>{m.userName}</Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>{m.userEmail}</TableCell>
+                    <TableCell>{m.userJobTitle ?? '—'}</TableCell>
+                    <TableCell>
+                      <Chip label={m.role} size="small" color={roleColor[m.role] ?? 'default'} />
+                    </TableCell>
+                    <TableCell>
+                      {m.dailyRate ? `$${m.dailyRate.toLocaleString()}` : '—'}
+                    </TableCell>
+                    <TableCell>{new Date(m.joinedDate).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={m.isActive ? 'Active' : 'Inactive'}
+                        size="small"
+                        color={m.isActive ? 'success' : 'default'}
+                        variant={m.isActive ? 'filled' : 'outlined'}
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title={m.isActive ? 'Deactivate' : 'Reactivate'}>
+                        <IconButton size="small" onClick={() => handleToggleActive(m)}>
+                          {m.isActive ? <PersonOffIcon fontSize="small" /> : <PersonIcon fontSize="small" color="success" />}
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Remove">
+                        <IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {!hasItems && (
+        <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            icon={<GroupIcon />}
+            title="No team members yet!"
+            description="Add workers, managers, or viewers to collaborate on your construction projects."
+            actionLabel="Add Member"
+            onAction={() => { setForm(emptyForm); setFormOpen(true); }}
+          />
+        </Card>
+      )}
 
       {data && data.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>

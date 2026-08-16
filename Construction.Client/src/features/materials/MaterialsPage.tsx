@@ -17,6 +17,8 @@ import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import EmptyState from '@/components/EmptyState';
+import CategoryIcon from '@mui/icons-material/Category';
 import { useSnackbar } from 'notistack';
 
 const emptyForm = { name: '', materialCode: '', category: '', unit: '', unitPrice: 0, quantityInStock: 0, supplierName: '', storageLocation: '', notes: '' };
@@ -66,64 +68,81 @@ export default function MaterialsPage() {
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
 
-  return (
-    <Box>
-      <PageHeader title="Materials" actionLabel="Add Material" onAction={openCreate} />
-      <Box display="flex" gap={2} mb={3}>
-        <TextField size="small" placeholder="Search materials..." value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> } }}
-          sx={{ minWidth: 280 }} />
-      </Box>
+  const hasItems = Boolean(data?.items && data.items.length > 0);
 
-      <Card>
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Code</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Unit</TableCell>
-                <TableCell align="right">Price</TableCell>
-                <TableCell align="right">Stock</TableCell>
-                <TableCell>Supplier</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data?.items.map((m) => (
-                <TableRow key={m.id} hover>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={0.5}>
-                      <Typography fontWeight={500}>{m.name}</Typography>
-                      {m.isLowStock && <Tooltip title="Low Stock"><WarningIcon color="warning" fontSize="small" /></Tooltip>}
-                    </Box>
-                  </TableCell>
-                  <TableCell><Chip label={m.materialCode} size="small" variant="outlined" /></TableCell>
-                  <TableCell>{m.category}</TableCell>
-                  <TableCell>{m.unit}</TableCell>
-                  <TableCell align="right">${m.unitPrice.toLocaleString()}</TableCell>
-                  <TableCell align="right">
-                    <Typography fontWeight={600} color={m.isLowStock ? 'error' : 'text.primary'}>{m.quantityInStock}</Typography>
-                  </TableCell>
-                  <TableCell>{m.supplierName ?? '—'}</TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton></Tooltip>
-                    <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}>
-                      <DeleteIcon fontSize="small" /></IconButton></Tooltip>
-                  </TableCell>
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
+      <PageHeader
+        title="Materials"
+        actionLabel={hasItems ? "Add Material" : undefined}
+        onAction={hasItems ? openCreate : undefined}
+      />
+      {(hasItems || search) && (
+        <Box display="flex" gap={2} mb={3}>
+          <TextField size="small" placeholder="Search materials..." value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            slotProps={{ input: { startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> } }}
+            sx={{ minWidth: 280 }} />
+        </Box>
+      )}
+
+      {hasItems && (
+        <Card>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Name</TableCell>
+                  <TableCell>Code</TableCell>
+                  <TableCell>Category</TableCell>
+                  <TableCell>Unit</TableCell>
+                  <TableCell align="right">Price</TableCell>
+                  <TableCell align="right">Stock</TableCell>
+                  <TableCell>Supplier</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))}
-              {(!data?.items || data.items.length === 0) && (
-                <TableRow><TableCell colSpan={8} align="center" sx={{ py: 6 }}>
-                  <Typography color="text.secondary">No materials found</Typography>
-                </TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+              </TableHead>
+              <TableBody>
+                {data?.items.map((m) => (
+                  <TableRow key={m.id} hover>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={0.5}>
+                        <Typography fontWeight={500}>{m.name}</Typography>
+                        {m.isLowStock && <Tooltip title="Low Stock"><WarningIcon color="warning" fontSize="small" /></Tooltip>}
+                      </Box>
+                    </TableCell>
+                    <TableCell><Chip label={m.materialCode} size="small" variant="outlined" /></TableCell>
+                    <TableCell>{m.category}</TableCell>
+                    <TableCell>{m.unit}</TableCell>
+                    <TableCell align="right">${m.unitPrice.toLocaleString()}</TableCell>
+                    <TableCell align="right">
+                      <Typography fontWeight={600} color={m.isLowStock ? 'error' : 'text.primary'}>{m.quantityInStock}</Typography>
+                    </TableCell>
+                    <TableCell>{m.supplierName ?? '—'}</TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                      <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}>
+                        <DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Card>
+      )}
+
+      {!hasItems && (
+        <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <EmptyState
+            icon={<CategoryIcon />}
+            title="No materials found!"
+            description="Add construction materials, batch codes, unit rates, and warehouse locations."
+            actionLabel="Add Material"
+            onAction={openCreate}
+          />
+        </Card>
+      )}
       {data && data.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination count={data.totalPages} page={page} onChange={(_e, v) => setPage(v)} color="primary" />

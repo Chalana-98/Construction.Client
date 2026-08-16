@@ -22,6 +22,9 @@ import { StatusChip, PriorityChip } from '@/components/StatusChip';
 import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
 import PageHeader from '@/components/PageHeader';
+import EmptyState from '@/components/EmptyState';
+import ApartmentIcon from '@mui/icons-material/Apartment';
+import ReportProblemIcon from '@mui/icons-material/ReportProblem';
 import { useAppSelector } from '@/store/hooks';
 
 function StatCard({
@@ -172,9 +175,14 @@ export default function DashboardPage() {
                   </ListItemButton>
                 ))}
                 {(!dashboard?.recentProjects || dashboard.recentProjects.length === 0) && (
-                  <Typography color="text.secondary" textAlign="center" py={3}>
-                    No projects yet
-                  </Typography>
+                  <EmptyState
+                    icon={<ApartmentIcon />}
+                    title="No projects yet!"
+                    description="Create a project to track milestones and budget."
+                    actionLabel="Add Project"
+                    onAction={() => navigate('/projects')}
+                    sx={{ py: 4 }}
+                  />
                 )}
               </List>
             </CardContent>
@@ -216,9 +224,12 @@ export default function DashboardPage() {
                   </ListItemButton>
                 ))}
                 {(!dashboard?.upcomingTasks || dashboard.upcomingTasks.length === 0) && (
-                  <Typography color="text.secondary" textAlign="center" py={3}>
-                    No upcoming tasks
-                  </Typography>
+                  <EmptyState
+                    icon={<TaskAltIcon />}
+                    title="No upcoming tasks!"
+                    description="You are all caught up on scheduled deliverables."
+                    sx={{ py: 4 }}
+                  />
                 )}
               </List>
             </CardContent>
@@ -266,9 +277,12 @@ export default function DashboardPage() {
                   </ListItemButton>
                 ))}
                 {(!dashboard?.recentIssues || dashboard.recentIssues.length === 0) && (
-                  <Typography color="text.secondary" textAlign="center" py={3}>
-                    No issues reported
-                  </Typography>
+                  <EmptyState
+                    icon={<ReportProblemIcon />}
+                    title="No issues reported!"
+                    description="Zero open defects or safety incidents recorded."
+                    sx={{ py: 4 }}
+                  />
                 )}
               </List>
             </CardContent>
