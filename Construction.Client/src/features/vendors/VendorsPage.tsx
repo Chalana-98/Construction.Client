@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import {
   Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, MenuItem, Typography, Pagination, Chip, IconButton, Tooltip,
+  TextField, MenuItem, Pagination, Chip, IconButton,
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Grid,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import {
   useGetVendorsQuery, useCreateVendorMutation,
   useDeleteVendorMutation,
@@ -23,6 +25,19 @@ import { useSnackbar } from 'notistack';
 
 const emptyForm = { name: '', type: VendorType.Subcontractor, contactName: '', email: '', phone: '', address: '', taxId: '', notes: '' };
 
+const vendorValidationSchema = Yup.object({
+  name: Yup.string()
+    .min(2, 'Company name must be at least 2 characters.')
+    .required('Company / Vendor name is required.'),
+  type: Yup.number()
+    .required('Vendor type is required.'),
+  email: Yup.string()
+    .email('Please enter a valid email address.')
+    .optional(),
+  contactName: Yup.string().optional(),
+  phone: Yup.string().optional(),
+});
+
 export default function VendorsPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, error, refetch } = useGetVendorsQuery({ page, pageSize: 15 });
@@ -33,24 +48,58 @@ export default function VendorsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<VendorDto | null>(null);
-  const [form, setForm] = useState(emptyForm);
 
-  const handleCreate = async () => {
-    try {
-      await createVendor(form).unwrap();
-      enqueueSnackbar('Vendor created', { variant: 'success' });
-      setFormOpen(false);
-      setForm(emptyForm);
-    } catch { enqueueSnackbar('Failed to create vendor', { variant: 'error' }); }
+  const formik = useFormik({
+    initialValues: emptyForm,
+    validationSchema: vendorValidationSchema,
+    onSubmit: async (values, { setErrors }) => {
+      try {
+        await createVendor({
+          name: values.name.trim(),
+          type: Number(values.type),
+          contactName: values.contactName.trim() || undefined,
+          email: values.email.trim() || undefined,
+          phone: values.phone.trim() || undefined,
+        }).unwrap();
+        enqueueSnackbar('Vendor created successfully', { variant: 'success' });
+        handleCloseForm();
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { message?: string; errors?: Record<string, string[]> } };
+        if (apiErr?.data?.errors) {
+          const sErrors: Record<string, string> = {};
+          Object.entries(apiErr.data.errors).forEach(([k, msgs]) => {
+            sErrors[k.charAt(0).toLowerCase() + k.slice(1)] = msgs.join(', ');
+          });
+          setErrors(sErrors);
+        }
+        enqueueSnackbar(apiErr?.data?.message || 'Failed to create vendor', { variant: 'error' });
+      }
+    },
+  });
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setSelected(null);
+    formik.resetForm({ values: emptyForm });
+  };
+
+  const handleOpenCreate = () => {
+    setSelected(null);
+    formik.resetForm({ values: emptyForm });
+    setFormOpen(true);
   };
 
   const handleDelete = async () => {
     if (!selected) return;
-    try { await deleteVendor(selected.id).unwrap(); enqueueSnackbar('Deleted', { variant: 'success' }); setDeleteOpen(false); }
-    catch { enqueueSnackbar('Failed to delete', { variant: 'error' }); }
+    try {
+      await deleteVendor(selected.id).unwrap();
+      enqueueSnackbar('Vendor deleted successfully', { variant: 'success' });
+      setDeleteOpen(false);
+      setSelected(null);
+    } catch {
+      enqueueSnackbar('Failed to delete vendor', { variant: 'error' });
+    }
   };
-
-  const upd = (f: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [f]: e.target.value }));
 
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
@@ -60,36 +109,38 @@ export default function VendorsPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
       <PageHeader
-        title="Vendors & Directory"
-        actionLabel={hasItems ? "Add Vendor" : undefined}
-        onAction={hasItems ? () => { setForm(emptyForm); setFormOpen(true); } : undefined}
+        title="Vendors & Subcontractors"
+        subtitle="Manage suppliers, equipment renters, and specialty trade subcontractors"
+        actionLabel={hasItems ? 'Add Vendor' : undefined}
+        onAction={hasItems ? handleOpenCreate : undefined}
       />
 
       {hasItems && (
-        <Card>
-          <TableContainer>
+        <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          <TableContainer sx={{ flexGrow: 1 }}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Name</TableCell>
+                  <TableCell>Company Name</TableCell>
                   <TableCell>Type</TableCell>
-                  <TableCell>Contact Person</TableCell>
-                  <TableCell>Email</TableCell>
+                  <TableCell>Contact</TableCell>
                   <TableCell>Phone</TableCell>
+                  <TableCell>Email</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {data?.items.map((v) => (
-                  <TableRow key={v.id} hover>
-                    <TableCell><Typography fontWeight={500}>{v.name}</Typography></TableCell>
-                    <TableCell><Chip label={v.typeName} size="small" variant="outlined" color="primary" /></TableCell>
-                    <TableCell>{v.contactName || '—'}</TableCell>
-                    <TableCell>{v.email || '—'}</TableCell>
-                    <TableCell>{v.phone || '—'}</TableCell>
+                  <TableRow key={v.id}>
+                    <TableCell sx={{ fontWeight: 600 }}>{v.name}</TableCell>
+                    <TableCell>
+                      <Chip label={VendorTypeLabels[v.type] ?? v.type} size="small" />
+                    </TableCell>
+                    <TableCell>{v.contactName ?? '—'}</TableCell>
+                    <TableCell>{v.phone ?? '—'}</TableCell>
+                    <TableCell>{v.email ?? '—'}</TableCell>
                     <TableCell align="right">
-                      <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(v); setDeleteOpen(true); }}>
-                        <DeleteIcon fontSize="small" /></IconButton></Tooltip>
+                      <IconButton size="small" color="error" onClick={() => { setSelected(v); setDeleteOpen(true); }}><DeleteIcon fontSize="small" /></IconButton>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -106,7 +157,7 @@ export default function VendorsPage() {
             title="No vendors or suppliers yet!"
             description="Add subcontractors, material suppliers, and equipment rental vendors to your directory."
             actionLabel="Add Vendor"
-            onAction={() => { setForm(emptyForm); setFormOpen(true); }}
+            onAction={handleOpenCreate}
           />
         </Card>
       )}
@@ -116,24 +167,88 @@ export default function VendorsPage() {
         </Box>
       )}
 
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Vendor</DialogTitle>
+      <Dialog open={formOpen} onClose={handleCloseForm} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Add Vendor / Subcontractor</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ pt: 1 }}>
-            <Grid size={{ xs: 12 }}><TextField fullWidth label="Company Name" value={form.name} onChange={upd('name')} required /></Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth select label="Vendor Type" value={form.type} onChange={upd('type')}>
+              <TextField
+                fullWidth
+                id="name"
+                name="name"
+                label="Vendor Name"
+                value={formik.values.name}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                required
+                error={formik.touched.name && Boolean(formik.errors.name)}
+                helperText={formik.touched.name && formik.errors.name}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                select
+                id="type"
+                name="type"
+                label="Vendor Type"
+                value={formik.values.type}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                required
+                error={formik.touched.type && Boolean(formik.errors.type)}
+                helperText={formik.touched.type && formik.errors.type}
+              >
                 {Object.entries(VendorTypeLabels).map(([v, l]) => <MenuItem key={v} value={Number(v)}>{l}</MenuItem>)}
               </TextField>
             </Grid>
-            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth label="Contact Name" value={form.contactName} onChange={upd('contactName')} /></Grid>
-            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth label="Phone" value={form.phone} onChange={upd('phone')} /></Grid>
-            <Grid size={{ xs: 12 }}><TextField fullWidth label="Email" value={form.email} onChange={upd('email')} type="email" /></Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="contactName"
+                name="contactName"
+                label="Contact Name"
+                value={formik.values.contactName}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="phone"
+                name="phone"
+                label="Phone"
+                value={formik.values.phone}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                id="email"
+                name="email"
+                label="Email"
+                type="email"
+                value={formik.values.email}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.email && Boolean(formik.errors.email)}
+                helperText={formik.touched.email && formik.errors.email}
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setFormOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={creating}>Create</Button>
+          <Button onClick={handleCloseForm}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => formik.handleSubmit()}
+            disabled={creating || formik.isSubmitting}
+          >
+            Create
+          </Button>
         </DialogActions>
       </Dialog>
 

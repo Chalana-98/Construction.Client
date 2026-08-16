@@ -2,12 +2,14 @@ import { useState } from 'react';
 import {
   Box, Card, CardContent, Grid, Typography, Pagination, Chip,
   LinearProgress, IconButton, Tooltip, Button,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PaidIcon from '@mui/icons-material/Paid';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import {
   useGetMilestonesQuery, useCreateMilestoneMutation,
   useUpdateMilestoneMutation, useDeleteMilestoneMutation,
@@ -20,13 +22,29 @@ import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
 import FlagIcon from '@mui/icons-material/Flag';
+import { useGetProjectsQuery } from '@/features/projects/api';
 import { useSnackbar } from 'notistack';
 
 const emptyForm = { name: '', description: '', dueDate: '', paymentAmount: 0, notes: '', projectId: '' };
 
+const milestoneValidationSchema = Yup.object({
+  projectId: Yup.string()
+    .required('Project selection is required.'),
+  name: Yup.string()
+    .min(3, 'Name must be at least 3 characters long.')
+    .required('Milestone name is required.'),
+  dueDate: Yup.string()
+    .required('Due date is required.'),
+  paymentAmount: Yup.number()
+    .typeError('Payment amount must be a number.')
+    .min(0, 'Payment amount cannot be negative.')
+    .optional(),
+});
+
 export default function MilestonesPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, error, refetch } = useGetMilestonesQuery({ page, pageSize: 12 });
+  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 100 });
   const [createMilestone, { isLoading: creating }] = useCreateMilestoneMutation();
   const [updateMilestone, { isLoading: updating }] = useUpdateMilestoneMutation();
   const [deleteMilestone, { isLoading: deleting }] = useDeleteMilestoneMutation();
@@ -35,36 +53,118 @@ export default function MilestonesPage() {
   const { enqueueSnackbar } = useSnackbar();
 
   const [formOpen, setFormOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<MilestoneDto | null>(null);
-  const [form, setForm] = useState(emptyForm);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const openCreate = () => { setSelected(null); setForm(emptyForm); setFormOpen(true); };
-  const openEdit = (m: MilestoneDto) => {
-    setSelected(m);
-    setForm({ name: m.name, description: m.description ?? '', dueDate: m.dueDate.split('T')[0], paymentAmount: m.paymentAmount ?? 0, notes: m.notes ?? '', projectId: m.projectId });
+  const formik = useFormik({
+    enableReinitialize: true,
+    initialValues: selected
+      ? {
+          name: selected.name,
+          description: selected.description ?? '',
+          dueDate: selected.dueDate ? selected.dueDate.split('T')[0] : '',
+          paymentAmount: selected.paymentAmount ?? 0,
+          notes: selected.notes ?? '',
+          projectId: selected.projectId,
+        }
+      : emptyForm,
+    validationSchema: milestoneValidationSchema,
+    onSubmit: async (values, { setErrors }) => {
+      try {
+        if (selected) {
+          await updateMilestone({
+            id: selected.id,
+            data: {
+              name: values.name.trim(),
+              description: values.description.trim() || undefined,
+              dueDate: new Date(values.dueDate).toISOString(),
+              paymentAmount: values.paymentAmount ? Number(values.paymentAmount) : undefined,
+              notes: values.notes.trim() || undefined,
+            },
+          }).unwrap();
+          enqueueSnackbar('Milestone updated successfully', { variant: 'success' });
+        } else {
+          await createMilestone({
+            projectId: values.projectId,
+            name: values.name.trim(),
+            description: values.description.trim() || undefined,
+            dueDate: new Date(values.dueDate).toISOString(),
+            paymentAmount: values.paymentAmount ? Number(values.paymentAmount) : undefined,
+            notes: values.notes.trim() || undefined,
+          }).unwrap();
+          enqueueSnackbar('Milestone created successfully', { variant: 'success' });
+        }
+        handleCloseForm();
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { message?: string; errors?: Record<string, string[]> } };
+        if (apiErr?.data?.errors) {
+          const sErrors: Record<string, string> = {};
+          Object.entries(apiErr.data.errors).forEach(([k, msgs]) => {
+            sErrors[k.charAt(0).toLowerCase() + k.slice(1)] = msgs.join(', ');
+          });
+          setErrors(sErrors);
+        }
+        enqueueSnackbar(apiErr?.data?.message || 'Failed to save milestone', { variant: 'error' });
+      }
+    },
+  });
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setSelected(null);
+    formik.resetForm({ values: emptyForm });
+  };
+
+  const handleOpenCreate = () => {
+    setSelected(null);
+    formik.resetForm({ values: emptyForm });
     setFormOpen(true);
   };
 
-  const handleSave = async () => {
-    try {
-      if (selected) {
-        await updateMilestone({ id: selected.id, data: { name: form.name, description: form.description, dueDate: form.dueDate, paymentAmount: form.paymentAmount, notes: form.notes } }).unwrap();
-      } else {
-        await createMilestone({ ...form, paymentAmount: form.paymentAmount || undefined }).unwrap();
-      }
-      enqueueSnackbar(selected ? 'Updated' : 'Created', { variant: 'success' });
-      setFormOpen(false);
-    } catch { enqueueSnackbar('Failed', { variant: 'error' }); }
+  const handleOpenEdit = (m: MilestoneDto) => {
+    setSelected(m);
+    formik.resetForm({
+      values: {
+        name: m.name,
+        description: m.description ?? '',
+        dueDate: m.dueDate ? m.dueDate.split('T')[0] : '',
+        paymentAmount: m.paymentAmount ?? 0,
+        notes: m.notes ?? '',
+        projectId: m.projectId,
+      },
+    });
+    setFormOpen(true);
   };
 
   const handleDelete = async () => {
     if (!selected) return;
-    try { await deleteMilestone(selected.id).unwrap(); enqueueSnackbar('Deleted', { variant: 'success' }); setDeleteOpen(false); }
-    catch { enqueueSnackbar('Failed', { variant: 'error' }); }
+    try {
+      await deleteMilestone(selected.id).unwrap();
+      enqueueSnackbar('Milestone deleted successfully', { variant: 'success' });
+      setDeleteOpen(false);
+      setSelected(null);
+    } catch {
+      enqueueSnackbar('Failed to delete milestone', { variant: 'error' });
+    }
   };
 
-  const upd = (f: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [f]: e.target.value }));
+  const handleComplete = async (id: string) => {
+    try {
+      await completeMilestone(id).unwrap();
+      enqueueSnackbar('Milestone marked complete', { variant: 'success' });
+    } catch {
+      enqueueSnackbar('Failed to complete milestone', { variant: 'error' });
+    }
+  };
+
+  const handleMarkPayment = async (id: string) => {
+    try {
+      await markPayment(id).unwrap();
+      enqueueSnackbar('Payment recorded', { variant: 'success' });
+    } catch {
+      enqueueSnackbar('Failed to record payment', { variant: 'error' });
+    }
+  };
 
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
@@ -74,9 +174,10 @@ export default function MilestonesPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
       <PageHeader
-        title="Milestones"
+        title="Project Milestones & Billing Checkpoints"
+        subtitle="Track delivery gates, construction phases, payment releases, and task dependencies"
         actionLabel={hasItems ? "Add Milestone" : undefined}
-        onAction={hasItems ? openCreate : undefined}
+        onAction={hasItems ? handleOpenCreate : undefined}
       />
 
       {hasItems && (
@@ -116,21 +217,19 @@ export default function MilestonesPage() {
                     <Box display="flex" justifyContent="flex-end" gap={0.5} mt={1}>
                       {!m.isCompleted && (
                         <Tooltip title="Mark Complete">
-                          <IconButton size="small" color="success" onClick={async () => {
-                            try { await completeMilestone(m.id).unwrap(); enqueueSnackbar('Completed', { variant: 'success' }); }
-                            catch { enqueueSnackbar('Failed', { variant: 'error' }); }
-                          }}><CheckCircleIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" color="success" onClick={() => handleComplete(m.id)}>
+                            <CheckCircleIcon fontSize="small" />
+                          </IconButton>
                         </Tooltip>
                       )}
                       {m.paymentAmount != null && m.paymentAmount > 0 && !m.paymentReceived && (
                         <Tooltip title="Payment Received">
-                          <IconButton size="small" color="primary" onClick={async () => {
-                            try { await markPayment(m.id).unwrap(); enqueueSnackbar('Payment marked', { variant: 'success' }); }
-                            catch { enqueueSnackbar('Failed', { variant: 'error' }); }
-                          }}><PaidIcon fontSize="small" /></IconButton>
+                          <IconButton size="small" color="primary" onClick={() => handleMarkPayment(m.id)}>
+                            <PaidIcon fontSize="small" />
+                          </IconButton>
                         </Tooltip>
                       )}
-                      <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(m)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                      <Tooltip title="Edit"><IconButton size="small" onClick={() => handleOpenEdit(m)}><EditIcon fontSize="small" /></IconButton></Tooltip>
                       <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}>
                         <DeleteIcon fontSize="small" /></IconButton></Tooltip>
                     </Box>
@@ -149,7 +248,7 @@ export default function MilestonesPage() {
             title="No milestones yet!"
             description="Create milestone checkpoints to track project phases and payment collections."
             actionLabel="Add Milestone"
-            onAction={openCreate}
+            onAction={handleOpenCreate}
           />
         </Card>
       )}
@@ -160,23 +259,118 @@ export default function MilestonesPage() {
         </Box>
       )}
 
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>{selected ? 'Edit Milestone' : 'Add Milestone'}</DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2} sx={{ pt: 1 }}>
+      <Dialog open={formOpen} onClose={handleCloseForm} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700, pb: 1 }}>
+          {selected ? 'Edit Milestone Checkpoint' : 'Add Milestone Checkpoint'}
+        </DialogTitle>
+        <DialogContent dividers sx={{ pt: 2 }}>
+          <Grid container spacing={2}>
             {!selected && (
-              <Grid size={{ xs: 12 }}><TextField fullWidth label="Project ID" value={form.projectId} onChange={upd('projectId')} required helperText="Enter the project ID" /></Grid>
+              <Grid size={{ xs: 12 }}>
+                <TextField
+                  select
+                  fullWidth
+                  id="projectId"
+                  name="projectId"
+                  label="Project"
+                  required
+                  value={formik.values.projectId}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.projectId && Boolean(formik.errors.projectId)}
+                  helperText={formik.touched.projectId && formik.errors.projectId}
+                >
+                  <MenuItem value="" disabled>Select project...</MenuItem>
+                  {projectsData?.items?.map((p) => (
+                    <MenuItem key={p.id} value={p.id}>{p.name} ({p.projectCode})</MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
             )}
-            <Grid size={{ xs: 12 }}><TextField fullWidth label="Name" value={form.name} onChange={upd('name')} required /></Grid>
-            <Grid size={{ xs: 12 }}><TextField fullWidth label="Description" value={form.description} onChange={upd('description')} multiline rows={2} /></Grid>
-            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth label="Due Date" value={form.dueDate} onChange={upd('dueDate')} type="date" slotProps={{ inputLabel: { shrink: true } }} required /></Grid>
-            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth label="Payment Amount" value={form.paymentAmount} onChange={upd('paymentAmount')} type="number" /></Grid>
-            <Grid size={{ xs: 12 }}><TextField fullWidth label="Notes" value={form.notes} onChange={upd('notes')} multiline rows={2} /></Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                id="name"
+                name="name"
+                label="Milestone Name"
+                required
+                value={formik.values.name}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.name && Boolean(formik.errors.name)}
+                helperText={formik.touched.name && formik.errors.name}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                id="description"
+                name="description"
+                label="Description"
+                value={formik.values.description}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                multiline
+                rows={2}
+                placeholder="Scope of work and deliverables required to complete milestone..."
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="dueDate"
+                name="dueDate"
+                label="Target Due Date"
+                required
+                value={formik.values.dueDate}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                type="date"
+                slotProps={{ inputLabel: { shrink: true } }}
+                error={formik.touched.dueDate && Boolean(formik.errors.dueDate)}
+                helperText={formik.touched.dueDate && formik.errors.dueDate}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="paymentAmount"
+                name="paymentAmount"
+                label="Milestone Billing Amount ($)"
+                value={formik.values.paymentAmount}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                type="number"
+                error={formik.touched.paymentAmount && Boolean(formik.errors.paymentAmount)}
+                helperText={formik.touched.paymentAmount && formik.errors.paymentAmount}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                id="notes"
+                name="notes"
+                label="Internal Notes"
+                value={formik.values.notes}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                multiline
+                rows={2}
+                placeholder="Contractor agreements or compliance notes..."
+              />
+            </Grid>
           </Grid>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setFormOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleSave} disabled={creating || updating}>{selected ? 'Update' : 'Create'}</Button>
+        <DialogActions sx={{ p: 2, px: 3, backgroundColor: '#fafafa' }}>
+          <Button onClick={handleCloseForm} color="inherit">Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => formik.handleSubmit()}
+            disabled={creating || updating || formik.isSubmitting}
+            sx={{ px: 3, fontWeight: 600 }}
+          >
+            {selected ? 'Update Milestone' : 'Create Milestone'}
+          </Button>
         </DialogActions>
       </Dialog>
 

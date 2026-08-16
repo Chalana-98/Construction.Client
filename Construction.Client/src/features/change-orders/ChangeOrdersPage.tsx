@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import {
   Box, Card, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  TextField, MenuItem, Typography, Pagination, Chip, IconButton, Tooltip,
+  TextField, MenuItem, Pagination, Chip, IconButton, Tooltip,
   Dialog, DialogTitle, DialogContent, DialogActions, Button, Grid,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import {
   useGetChangeOrdersQuery, useCreateChangeOrderMutation,
   useDeleteChangeOrderMutation, useApproveChangeOrderMutation, useRejectChangeOrderMutation
 } from '@/features/change-orders/api';
+import { useGetProjectsQuery } from '@/features/projects/api';
 import {
   ChangeOrderStatus, ChangeOrderStatusLabels
 } from '@/types';
@@ -25,6 +28,22 @@ import { useSnackbar } from 'notistack';
 
 const emptyForm = { projectId: '', title: '', description: '', requestedAmount: 0, scheduleImpactDays: 0 };
 
+const changeOrderValidationSchema = Yup.object({
+  projectId: Yup.string()
+    .required('Project selection is required.'),
+  title: Yup.string()
+    .min(3, 'Title must be at least 3 characters.')
+    .required('Change order title is required.'),
+  description: Yup.string()
+    .required('Description of scope adjustment is required.'),
+  requestedAmount: Yup.number()
+    .typeError('Requested amount must be a number.')
+    .required('Requested amount is required.'),
+  scheduleImpactDays: Yup.number()
+    .typeError('Schedule impact must be a number.')
+    .optional(),
+});
+
 export default function ChangeOrdersPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ChangeOrderStatus | ''>('');
@@ -32,6 +51,7 @@ export default function ChangeOrdersPage() {
     page, pageSize: 15,
     status: statusFilter === '' ? undefined : statusFilter,
   });
+  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 100 });
   const [createChangeOrder, { isLoading: creating }] = useCreateChangeOrderMutation();
   const [deleteChangeOrder, { isLoading: deleting }] = useDeleteChangeOrderMutation();
   const [approveChangeOrder] = useApproveChangeOrderMutation();
@@ -41,100 +61,138 @@ export default function ChangeOrdersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<ChangeOrderDto | null>(null);
-  const [form, setForm] = useState(emptyForm);
 
-  const handleCreate = async () => {
-    try {
-      await createChangeOrder({ ...form, requestedAmount: Number(form.requestedAmount), scheduleImpactDays: Number(form.scheduleImpactDays) }).unwrap();
-      enqueueSnackbar('Change Order created', { variant: 'success' });
-      setFormOpen(false);
-      setForm(emptyForm);
-    } catch { enqueueSnackbar('Failed to create', { variant: 'error' }); }
+  const formik = useFormik({
+    initialValues: emptyForm,
+    validationSchema: changeOrderValidationSchema,
+    onSubmit: async (values, { setErrors }) => {
+      try {
+        await createChangeOrder({
+          projectId: values.projectId,
+          title: values.title.trim(),
+          description: values.description.trim(),
+          requestedAmount: Number(values.requestedAmount),
+          scheduleImpactDays: Number(values.scheduleImpactDays) || 0,
+        }).unwrap();
+        enqueueSnackbar('Change Order created successfully', { variant: 'success' });
+        handleCloseForm();
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { message?: string; errors?: Record<string, string[]> } };
+        if (apiErr?.data?.errors) {
+          const sErrors: Record<string, string> = {};
+          Object.entries(apiErr.data.errors).forEach(([k, msgs]) => {
+            sErrors[k.charAt(0).toLowerCase() + k.slice(1)] = msgs.join(', ');
+          });
+          setErrors(sErrors);
+        }
+        enqueueSnackbar(apiErr?.data?.message || 'Failed to create change order', { variant: 'error' });
+      }
+    },
+  });
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setSelected(null);
+    formik.resetForm({ values: emptyForm });
+  };
+
+  const handleOpenCreate = () => {
+    setSelected(null);
+    formik.resetForm({ values: emptyForm });
+    setFormOpen(true);
   };
 
   const handleDelete = async () => {
     if (!selected) return;
-    try { await deleteChangeOrder(selected.id).unwrap(); enqueueSnackbar('Deleted', { variant: 'success' }); setDeleteOpen(false); }
-    catch { enqueueSnackbar('Failed to delete', { variant: 'error' }); }
+    try {
+      await deleteChangeOrder(selected.id).unwrap();
+      enqueueSnackbar('Change order deleted successfully', { variant: 'success' });
+      setDeleteOpen(false);
+      setSelected(null);
+    } catch {
+      enqueueSnackbar('Failed to delete change order', { variant: 'error' });
+    }
   };
 
   const handleApprove = async (id: string) => {
-    try { await approveChangeOrder(id).unwrap(); enqueueSnackbar('Approved', { variant: 'success' }); }
-    catch { enqueueSnackbar('Failed to approve', { variant: 'error' }); }
+    try {
+      await approveChangeOrder(id).unwrap();
+      enqueueSnackbar('Change order approved', { variant: 'success' });
+    } catch {
+      enqueueSnackbar('Failed to approve', { variant: 'error' });
+    }
   };
 
   const handleReject = async (id: string) => {
-    try { await rejectChangeOrder(id).unwrap(); enqueueSnackbar('Rejected', { variant: 'warning' }); }
-    catch { enqueueSnackbar('Failed to reject', { variant: 'error' }); }
+    try {
+      await rejectChangeOrder(id).unwrap();
+      enqueueSnackbar('Change order rejected', { variant: 'info' });
+    } catch {
+      enqueueSnackbar('Failed to reject', { variant: 'error' });
+    }
   };
-
-  const upd = (f: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [f]: e.target.value }));
 
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
 
-  const hasItems = Boolean(data?.items && data.items.length > 0);
+  const hasItems = (data?.items?.length ?? 0) > 0;
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
       <PageHeader
         title="Change Orders"
-        actionLabel={hasItems ? "New Change Order" : undefined}
-        onAction={hasItems ? () => { setForm(emptyForm); setFormOpen(true); } : undefined}
+        subtitle="Manage variations, contract scope additions, and budget amendments"
+        actionLabel={hasItems ? 'New Change Order' : undefined}
+        onAction={hasItems ? handleOpenCreate : undefined}
       />
-      {(hasItems || statusFilter) && (
-        <Box display="flex" gap={2} mb={3} flexWrap="wrap">
-          <TextField size="small" select label="Status" value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value as ChangeOrderStatus | ''); setPage(1); }}
-            sx={{ minWidth: 150 }}
+
+      {hasItems && (
+        <Box display="flex" gap={2} mb={2}>
+          <TextField
+            select
+            size="small"
+            label="Status"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as ChangeOrderStatus | '')}
+            sx={{ minWidth: 160 }}
           >
-            <MenuItem value="">All</MenuItem>
-            {Object.entries(ChangeOrderStatusLabels).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}
+            <MenuItem value="">All Statuses</MenuItem>
+            {Object.entries(ChangeOrderStatusLabels).map(([v, l]) => (
+              <MenuItem key={v} value={v}>{l}</MenuItem>
+            ))}
           </TextField>
         </Box>
       )}
 
       {hasItems && (
-        <Card>
-          <TableContainer>
+        <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          <TableContainer sx={{ flexGrow: 1 }}>
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>CO #</TableCell>
+                  <TableCell>Number</TableCell>
                   <TableCell>Title</TableCell>
-                  <TableCell>Project</TableCell>
                   <TableCell>Status</TableCell>
-                  <TableCell>Requested Amount</TableCell>
-                  <TableCell>Schedule Impact (Days)</TableCell>
-                  <TableCell>Date</TableCell>
+                  <TableCell align="right">Requested Amount</TableCell>
+                  <TableCell align="right">Schedule Impact</TableCell>
+                  <TableCell>Created</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {data?.items.map((co) => (
-                  <TableRow key={co.id} hover>
+                {data?.items?.map((co) => (
+                  <TableRow key={co.id}>
                     <TableCell><Chip label={co.number} size="small" variant="outlined" /></TableCell>
-                    <TableCell><Typography fontWeight={500}>{co.title}</Typography></TableCell>
-                    <TableCell>{co.projectName}</TableCell>
-                    <TableCell>
-                      <Chip 
-                        label={co.statusName} 
-                        size="small" 
-                        color={
-                          co.status === ChangeOrderStatus.Approved ? 'success' : 
-                          co.status === ChangeOrderStatus.Rejected ? 'error' : 
-                          co.status === ChangeOrderStatus.Pending ? 'warning' : 'default'
-                        } 
-                      />
-                    </TableCell>
-                    <TableCell>${co.requestedAmount.toLocaleString()}</TableCell>
-                    <TableCell>{co.scheduleImpactDays}</TableCell>
+                    <TableCell sx={{ fontWeight: 600 }}>{co.title}</TableCell>
+                    <TableCell><Chip label={ChangeOrderStatusLabels[co.status] ?? co.status} size="small" /></TableCell>
+                    <TableCell align="right">${co.requestedAmount.toLocaleString()}</TableCell>
+                    <TableCell align="right">{co.scheduleImpactDays > 0 ? `+${co.scheduleImpactDays}d` : 'None'}</TableCell>
                     <TableCell>{new Date(co.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell align="right">
                       {co.status === ChangeOrderStatus.Pending && (
                         <>
                           <Tooltip title="Approve"><IconButton size="small" color="success" onClick={() => handleApprove(co.id)}><CheckCircleIcon fontSize="small" /></IconButton></Tooltip>
-                          <Tooltip title="Reject"><IconButton size="small" color="warning" onClick={() => handleReject(co.id)}><CancelIcon fontSize="small" /></IconButton></Tooltip>
+                          <Tooltip title="Reject"><IconButton size="small" color="error" onClick={() => handleReject(co.id)}><CancelIcon fontSize="small" /></IconButton></Tooltip>
                         </>
                       )}
                       <Tooltip title="Delete"><IconButton size="small" color="error" onClick={() => { setSelected(co); setDeleteOpen(true); }}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
@@ -154,7 +212,7 @@ export default function ChangeOrdersPage() {
             title="No change orders yet!"
             description="Create contract scope revisions, cost adjustments, and schedule impact records."
             actionLabel="New Change Order"
-            onAction={() => { setForm(emptyForm); setFormOpen(true); }}
+            onAction={handleOpenCreate}
           />
         </Card>
       )}
@@ -164,20 +222,98 @@ export default function ChangeOrdersPage() {
         </Box>
       )}
 
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create Change Order</DialogTitle>
+      <Dialog open={formOpen} onClose={handleCloseForm} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Create Change Order</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ pt: 1 }}>
-            <Grid size={{ xs: 12 }}><TextField fullWidth label="Project ID" value={form.projectId} onChange={upd('projectId')} required helperText="Enter the Project ID" /></Grid>
-            <Grid size={{ xs: 12 }}><TextField fullWidth label="Title" value={form.title} onChange={upd('title')} required /></Grid>
-            <Grid size={{ xs: 12 }}><TextField fullWidth label="Description" value={form.description} onChange={upd('description')} multiline rows={4} required /></Grid>
-            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth type="number" label="Requested Amount" value={form.requestedAmount} onChange={upd('requestedAmount')} required /></Grid>
-            <Grid size={{ xs: 12, sm: 6 }}><TextField fullWidth type="number" label="Schedule Impact (Days)" value={form.scheduleImpactDays} onChange={upd('scheduleImpactDays')} required /></Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                select
+                fullWidth
+                id="projectId"
+                name="projectId"
+                label="Project"
+                value={formik.values.projectId}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.projectId && Boolean(formik.errors.projectId)}
+                helperText={formik.touched.projectId && formik.errors.projectId}
+                required
+              >
+                <MenuItem value="" disabled>Select project...</MenuItem>
+                {projectsData?.items?.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>{p.name} ({p.projectCode})</MenuItem>
+                ))}
+              </TextField>
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                id="title"
+                name="title"
+                label="Title"
+                value={formik.values.title}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                required
+                error={formik.touched.title && Boolean(formik.errors.title)}
+                helperText={formik.touched.title && formik.errors.title}
+              />
+            </Grid>
+            <Grid size={{ xs: 12 }}>
+              <TextField
+                fullWidth
+                id="description"
+                name="description"
+                label="Description"
+                value={formik.values.description}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                multiline
+                rows={3}
+                required
+                error={formik.touched.description && Boolean(formik.errors.description)}
+                helperText={formik.touched.description && formik.errors.description}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="requestedAmount"
+                name="requestedAmount"
+                type="number"
+                label="Requested Amount ($)"
+                value={formik.values.requestedAmount}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                required
+                error={formik.touched.requestedAmount && Boolean(formik.errors.requestedAmount)}
+                helperText={formik.touched.requestedAmount && formik.errors.requestedAmount}
+              />
+            </Grid>
+            <Grid size={{ xs: 12, sm: 6 }}>
+              <TextField
+                fullWidth
+                id="scheduleImpactDays"
+                name="scheduleImpactDays"
+                type="number"
+                label="Schedule Impact (Days)"
+                value={formik.values.scheduleImpactDays}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setFormOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate} disabled={creating}>Create</Button>
+          <Button onClick={handleCloseForm}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => formik.handleSubmit()}
+            disabled={creating || formik.isSubmitting}
+          >
+            Create
+          </Button>
         </DialogActions>
       </Dialog>
 

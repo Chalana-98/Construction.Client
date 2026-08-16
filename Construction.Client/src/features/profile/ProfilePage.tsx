@@ -12,12 +12,14 @@ import EditIcon from '@mui/icons-material/Edit';
 import CancelIcon from '@mui/icons-material/Cancel';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import BadgeIcon from '@mui/icons-material/Badge';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import SecurityIcon from '@mui/icons-material/Security';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import {
   useGetProfileQuery,
   useUpdateProfileMutation,
@@ -27,6 +29,27 @@ import { useAppDispatch } from '@/store/hooks';
 import { updateUser } from '@/store/authSlice';
 import PageHeader from '@/components/PageHeader';
 
+const profileValidationSchema = Yup.object({
+  firstName: Yup.string()
+    .min(2, 'First name must be at least 2 characters.')
+    .required('First name is required.'),
+  lastName: Yup.string()
+    .min(2, 'Last name must be at least 2 characters.')
+    .required('Last name is required.'),
+  phoneNumber: Yup.string().optional(),
+  jobTitle: Yup.string().optional(),
+});
+
+const passwordValidationSchema = Yup.object({
+  currentPassword: Yup.string().required('Current password is required.'),
+  newPassword: Yup.string()
+    .min(8, 'Password must be at least 8 characters long.')
+    .required('New password is required.'),
+  confirmPassword: Yup.string()
+    .oneOf([Yup.ref('newPassword')], 'Passwords do not match.')
+    .required('Confirm password is required.'),
+});
+
 export default function ProfilePage() {
   const { data: profile, isLoading, error } = useGetProfileQuery();
   const [updateProfile, { isLoading: isUpdating }] = useUpdateProfileMutation();
@@ -35,20 +58,9 @@ export default function ProfilePage() {
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
-  const [form, setForm] = useState({
-    firstName: '',
-    lastName: '',
-    phoneNumber: '',
-    jobTitle: '',
-  });
 
   // Password change state
   const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
 
@@ -56,95 +68,92 @@ export default function ProfilePage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
+  const profileFormik = useFormik({
+    enableReinitialize: true,
+    initialValues: {
+      firstName: profile?.firstName ?? '',
+      lastName: profile?.lastName ?? '',
+      phoneNumber: profile?.phoneNumber ?? '',
+      jobTitle: profile?.jobTitle ?? '',
+    },
+    validationSchema: profileValidationSchema,
+    onSubmit: async (values, { setErrors }) => {
+      setErrorMessage('');
+      setSuccessMessage('');
+      try {
+        const result = await updateProfile({
+          firstName: values.firstName.trim(),
+          lastName: values.lastName.trim(),
+          phoneNumber: values.phoneNumber.trim() || undefined,
+          jobTitle: values.jobTitle.trim() || undefined,
+        }).unwrap();
+
+        dispatch(updateUser({
+          userId: result.userId,
+          email: result.email,
+          name: result.fullName,
+          role: result.role,
+          tenantId: result.tenantId,
+        }));
+
+        setSuccessMessage('Profile updated successfully!');
+        setIsEditing(false);
+        setTimeout(() => setSuccessMessage(''), 4000);
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { error?: string; errors?: Record<string, string[]> } };
+        if (apiErr?.data?.errors) {
+          const sErrors: Record<string, string> = {};
+          Object.entries(apiErr.data.errors).forEach(([k, msgs]) => {
+            sErrors[k.charAt(0).toLowerCase() + k.slice(1)] = msgs.join(', ');
+          });
+          setErrors(sErrors);
+        }
+        setErrorMessage(apiErr?.data?.error ?? 'Failed to update profile.');
+      }
+    },
+  });
+
+  const passwordFormik = useFormik({
+    initialValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+    },
+    validationSchema: passwordValidationSchema,
+    onSubmit: async (values, { resetForm, setErrors }) => {
+      setErrorMessage('');
+      setSuccessMessage('');
+      try {
+        await changePassword({
+          currentPassword: values.currentPassword,
+          newPassword: values.newPassword,
+        }).unwrap();
+
+        setSuccessMessage('Password changed successfully!');
+        resetForm();
+        setShowPasswordForm(false);
+        setTimeout(() => setSuccessMessage(''), 4000);
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { error?: string; errors?: Record<string, string[]> } };
+        if (apiErr?.data?.errors) {
+          const sErrors: Record<string, string> = {};
+          Object.entries(apiErr.data.errors).forEach(([k, msgs]) => {
+            sErrors[k.charAt(0).toLowerCase() + k.slice(1)] = msgs.join(', ');
+          });
+          setErrors(sErrors);
+        }
+        setErrorMessage(apiErr?.data?.error ?? 'Failed to change password. Please check your current password.');
+      }
+    },
+  });
+
   const handleStartEdit = () => {
-    if (profile) {
-      setForm({
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        phoneNumber: profile.phoneNumber ?? '',
-        jobTitle: profile.jobTitle ?? '',
-      });
-    }
+    profileFormik.resetForm();
     setIsEditing(true);
   };
 
-  const handleUpdate = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
-  };
-
-  const handlePasswordUpdate = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPasswordForm((prev) => ({ ...prev, [field]: e.target.value }));
-  };
-
-  const handleSaveProfile = async () => {
-    setErrorMessage('');
-    setSuccessMessage('');
-    try {
-      const result = await updateProfile({
-        firstName: form.firstName,
-        lastName: form.lastName,
-        phoneNumber: form.phoneNumber,
-        jobTitle: form.jobTitle,
-      }).unwrap();
-
-      // Update Redux store with the new name
-      dispatch(updateUser({
-        userId: result.userId,
-        email: result.email,
-        name: result.fullName,
-        role: result.role,
-        tenantId: result.tenantId,
-      }));
-
-      setSuccessMessage('Profile updated successfully!');
-      setIsEditing(false);
-      setTimeout(() => setSuccessMessage(''), 4000);
-    } catch (err: unknown) {
-      const apiErr = err as { data?: { error?: string } };
-      setErrorMessage(apiErr.data?.error ?? 'Failed to update profile.');
-    }
-  };
-
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMessage('');
-    setSuccessMessage('');
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      setErrorMessage('New passwords do not match.');
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 8) {
-      setErrorMessage('New password must be at least 8 characters long.');
-      return;
-    }
-
-    try {
-      await changePassword({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-      }).unwrap();
-
-      setSuccessMessage('Password changed successfully!');
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-      setShowPasswordForm(false);
-      setTimeout(() => setSuccessMessage(''), 4000);
-    } catch (err: unknown) {
-      const apiErr = err as { data?: { error?: string } };
-      setErrorMessage(apiErr.data?.error ?? 'Failed to change password.');
-    }
-  };
-
   const handleCancelEdit = () => {
-    if (profile) {
-      setForm({
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        phoneNumber: profile.phoneNumber ?? '',
-        jobTitle: profile.jobTitle ?? '',
-      });
-    }
+    profileFormik.resetForm();
     setIsEditing(false);
     setErrorMessage('');
   };
@@ -158,6 +167,14 @@ export default function ProfilePage() {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'ADMIN': return 'error';
+      case 'MANAGER': return 'warning';
+      default: return 'primary';
+    }
   };
 
   if (isLoading) {
@@ -180,7 +197,7 @@ export default function ProfilePage() {
     return (
       <Box>
         <PageHeader title="Profile" subtitle="Manage your account settings" />
-        <Alert severity="error">Failed to load profile. Please try again later.</Alert>
+        <Alert severity="error" sx={{ mt: 2 }}>Failed to load profile. Please try again later.</Alert>
       </Box>
     );
   }
@@ -203,49 +220,44 @@ export default function ProfilePage() {
       <Grid container spacing={3}>
         {/* ── Left Column: Profile Card ── */}
         <Grid size={{ xs: 12, md: 4 }}>
-          <Card sx={{ textAlign: 'center' }}>
-            <CardContent sx={{ py: 4 }}>
-              <Avatar
-                sx={{
-                  width: 96,
-                  height: 96,
-                  mx: 'auto',
-                  mb: 2,
-                  bgcolor: 'primary.main',
-                  fontSize: 36,
-                  fontWeight: 700,
-                }}
-              >
-                {profile.firstName.charAt(0).toUpperCase()}{profile.lastName.charAt(0).toUpperCase()}
-              </Avatar>
-              <Typography variant="h5" fontWeight={700}>
-                {profile.fullName}
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 4 }}>
+              <Box position="relative" display="inline-block" mb={2}>
+                <Avatar
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    fontSize: '2rem',
+                    bgcolor: 'primary.main',
+                    boxShadow: 3,
+                    mx: 'auto',
+                  }}
+                >
+                  {profile.firstName.charAt(0).toUpperCase()}
+                  {profile.lastName.charAt(0).toUpperCase()}
+                </Avatar>
+              </Box>
+
+              <Typography variant="h5" fontWeight={700} gutterBottom>
+                {profile.firstName} {profile.lastName}
               </Typography>
-              <Typography color="text.secondary" variant="body2" gutterBottom>
+              <Typography variant="body2" color="text.secondary" gutterBottom>
                 {profile.email}
               </Typography>
-              <Stack direction="row" spacing={1} justifyContent="center" sx={{ mt: 1.5 }}>
+
+              <Box display="flex" justifyContent="center" gap={1} mt={1.5}>
                 <Chip
-                  icon={<SecurityIcon />}
+                  icon={<SecurityIcon sx={{ fontSize: '1rem !important' }} />}
                   label={profile.role}
-                  color="primary"
+                  color={getRoleBadgeColor(profile.role)}
                   size="small"
+                  sx={{ fontWeight: 600 }}
                 />
-                {profile.emailVerified && (
-                  <Chip
-                    icon={<CheckCircleIcon />}
-                    label="Verified"
-                    color="success"
-                    size="small"
-                    variant="outlined"
-                  />
-                )}
-              </Stack>
+              </Box>
             </CardContent>
 
             <Divider />
 
-            {/* Company Info Section */}
             <CardContent>
               <Stack spacing={2}>
                 <Box display="flex" alignItems="center" gap={1.5}>
@@ -255,38 +267,12 @@ export default function ProfilePage() {
                       Company
                     </Typography>
                     <Typography variant="body2" fontWeight={600}>
-                      {profile.companyName}
+                      {profile.companyName || 'No Company'}
                     </Typography>
                   </Box>
                 </Box>
-                {profile.jobTitle && (
-                  <Box display="flex" alignItems="center" gap={1.5}>
-                    <BadgeIcon color="action" fontSize="small" />
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Job Title
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        {profile.jobTitle}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-                {profile.phoneNumber && (
-                  <Box display="flex" alignItems="center" gap={1.5}>
-                    <PhoneIcon color="action" fontSize="small" />
-                    <Box>
-                      <Typography variant="caption" color="text.secondary">
-                        Phone
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        {profile.phoneNumber}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
                 <Box display="flex" alignItems="center" gap={1.5}>
-                  <CalendarTodayIcon color="action" fontSize="small" />
+                  <AccessTimeIcon color="action" fontSize="small" />
                   <Box>
                     <Typography variant="caption" color="text.secondary">
                       Member Since
@@ -311,18 +297,6 @@ export default function ProfilePage() {
                 )}
               </Stack>
             </CardContent>
-
-            <Divider />
-
-            <CardContent>
-              <Chip
-                label={`${profile.subscriptionPlan.charAt(0).toUpperCase() + profile.subscriptionPlan.slice(1)} Plan`}
-                variant="outlined"
-                color="info"
-                size="small"
-                sx={{ fontWeight: 600 }}
-              />
-            </CardContent>
           </Card>
         </Grid>
 
@@ -343,6 +317,7 @@ export default function ProfilePage() {
                     startIcon={<EditIcon />}
                     onClick={handleStartEdit}
                     size="small"
+                    variant="outlined"
                   >
                     Edit
                   </Button>
@@ -358,12 +333,12 @@ export default function ProfilePage() {
                     </Button>
                     <Button
                       startIcon={<SaveIcon />}
-                      onClick={handleSaveProfile}
+                      onClick={() => profileFormik.handleSubmit()}
                       size="small"
                       variant="contained"
-                      disabled={isUpdating}
+                      disabled={isUpdating || profileFormik.isSubmitting}
                     >
-                      {isUpdating ? 'Saving...' : 'Save'}
+                      {isUpdating || profileFormik.isSubmitting ? 'Saving...' : 'Save Changes'}
                     </Button>
                   </Stack>
                 )}
@@ -373,23 +348,33 @@ export default function ProfilePage() {
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
+                    id="firstName"
+                    name="firstName"
                     label="First Name"
-                    value={form.firstName}
-                    onChange={handleUpdate('firstName')}
+                    required={isEditing}
+                    value={profileFormik.values.firstName}
+                    onChange={profileFormik.handleChange}
+                    onBlur={profileFormik.handleBlur}
                     disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
-                    slotProps={{ input: { readOnly: !isEditing } }}
+                    variant="outlined"
+                    error={profileFormik.touched.firstName && Boolean(profileFormik.errors.firstName)}
+                    helperText={profileFormik.touched.firstName && profileFormik.errors.firstName}
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
+                    id="lastName"
+                    name="lastName"
                     label="Last Name"
-                    value={form.lastName}
-                    onChange={handleUpdate('lastName')}
+                    required={isEditing}
+                    value={profileFormik.values.lastName}
+                    onChange={profileFormik.handleChange}
+                    onBlur={profileFormik.handleBlur}
                     disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
-                    slotProps={{ input: { readOnly: !isEditing } }}
+                    variant="outlined"
+                    error={profileFormik.touched.lastName && Boolean(profileFormik.errors.lastName)}
+                    helperText={profileFormik.touched.lastName && profileFormik.errors.lastName}
                   />
                 </Grid>
                 <Grid size={{ xs: 12 }}>
@@ -398,10 +383,9 @@ export default function ProfilePage() {
                     label="Email"
                     value={profile.email}
                     disabled
-                    variant="filled"
+                    variant="outlined"
                     slotProps={{
                       input: {
-                        readOnly: true,
                         startAdornment: (
                           <InputAdornment position="start">
                             <EmailIcon fontSize="small" />
@@ -409,20 +393,21 @@ export default function ProfilePage() {
                         ),
                       },
                     }}
-                    helperText="Email cannot be changed"
                   />
                 </Grid>
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
+                    id="phoneNumber"
+                    name="phoneNumber"
                     label="Phone Number"
-                    value={form.phoneNumber}
-                    onChange={handleUpdate('phoneNumber')}
+                    value={profileFormik.values.phoneNumber}
+                    onChange={profileFormik.handleChange}
+                    onBlur={profileFormik.handleBlur}
                     disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
+                    variant="outlined"
                     slotProps={{
                       input: {
-                        readOnly: !isEditing,
                         startAdornment: (
                           <InputAdornment position="start">
                             <PhoneIcon fontSize="small" />
@@ -435,14 +420,16 @@ export default function ProfilePage() {
                 <Grid size={{ xs: 12, sm: 6 }}>
                   <TextField
                     fullWidth
+                    id="jobTitle"
+                    name="jobTitle"
                     label="Job Title"
-                    value={form.jobTitle}
-                    onChange={handleUpdate('jobTitle')}
+                    value={profileFormik.values.jobTitle}
+                    onChange={profileFormik.handleChange}
+                    onBlur={profileFormik.handleBlur}
                     disabled={!isEditing}
-                    variant={isEditing ? 'outlined' : 'filled'}
+                    variant="outlined"
                     slotProps={{
                       input: {
-                        readOnly: !isEditing,
                         startAdornment: (
                           <InputAdornment position="start">
                             <BadgeIcon fontSize="small" />
@@ -469,9 +456,13 @@ export default function ProfilePage() {
                 {!showPasswordForm && (
                   <Button
                     startIcon={<LockIcon />}
-                    onClick={() => setShowPasswordForm(true)}
+                    onClick={() => {
+                      passwordFormik.resetForm();
+                      setShowPasswordForm(true);
+                    }}
                     size="small"
-                    color="warning"
+                    variant="outlined"
+                    color="primary"
                   >
                     Change Password
                   </Button>
@@ -480,16 +471,21 @@ export default function ProfilePage() {
 
               {showPasswordForm && (
                 <Paper variant="outlined" sx={{ p: 3, borderRadius: 2 }}>
-                  <form onSubmit={handleChangePassword}>
+                  <form onSubmit={passwordFormik.handleSubmit}>
                     <Grid container spacing={2.5}>
                       <Grid size={{ xs: 12 }}>
                         <TextField
                           fullWidth
+                          id="currentPassword"
+                          name="currentPassword"
                           label="Current Password"
-                          type={showCurrentPassword ? 'text' : 'password'}
-                          value={passwordForm.currentPassword}
-                          onChange={handlePasswordUpdate('currentPassword')}
                           required
+                          type={showCurrentPassword ? 'text' : 'password'}
+                          value={passwordFormik.values.currentPassword}
+                          onChange={passwordFormik.handleChange}
+                          onBlur={passwordFormik.handleBlur}
+                          error={passwordFormik.touched.currentPassword && Boolean(passwordFormik.errors.currentPassword)}
+                          helperText={passwordFormik.touched.currentPassword && passwordFormik.errors.currentPassword}
                           slotProps={{
                             input: {
                               endAdornment: (
@@ -510,12 +506,16 @@ export default function ProfilePage() {
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           fullWidth
+                          id="newPassword"
+                          name="newPassword"
                           label="New Password"
-                          type={showNewPassword ? 'text' : 'password'}
-                          value={passwordForm.newPassword}
-                          onChange={handlePasswordUpdate('newPassword')}
                           required
-                          helperText="Min 8 characters"
+                          type={showNewPassword ? 'text' : 'password'}
+                          value={passwordFormik.values.newPassword}
+                          onChange={passwordFormik.handleChange}
+                          onBlur={passwordFormik.handleBlur}
+                          error={passwordFormik.touched.newPassword && Boolean(passwordFormik.errors.newPassword)}
+                          helperText={(passwordFormik.touched.newPassword && passwordFormik.errors.newPassword) || 'Min 8 characters'}
                           slotProps={{
                             input: {
                               endAdornment: (
@@ -536,29 +536,24 @@ export default function ProfilePage() {
                       <Grid size={{ xs: 12, sm: 6 }}>
                         <TextField
                           fullWidth
+                          id="confirmPassword"
+                          name="confirmPassword"
                           label="Confirm New Password"
-                          type="password"
-                          value={passwordForm.confirmPassword}
-                          onChange={handlePasswordUpdate('confirmPassword')}
                           required
-                          error={
-                            passwordForm.confirmPassword.length > 0 &&
-                            passwordForm.newPassword !== passwordForm.confirmPassword
-                          }
-                          helperText={
-                            passwordForm.confirmPassword.length > 0 &&
-                            passwordForm.newPassword !== passwordForm.confirmPassword
-                              ? 'Passwords do not match'
-                              : ''
-                          }
+                          type="password"
+                          value={passwordFormik.values.confirmPassword}
+                          onChange={passwordFormik.handleChange}
+                          onBlur={passwordFormik.handleBlur}
+                          error={passwordFormik.touched.confirmPassword && Boolean(passwordFormik.errors.confirmPassword)}
+                          helperText={passwordFormik.touched.confirmPassword && passwordFormik.errors.confirmPassword}
                         />
                       </Grid>
                       <Grid size={{ xs: 12 }}>
                         <Stack direction="row" spacing={1.5} justifyContent="flex-end">
                           <Button
                             onClick={() => {
+                              passwordFormik.resetForm();
                               setShowPasswordForm(false);
-                              setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
                               setErrorMessage('');
                             }}
                             color="inherit"
@@ -568,10 +563,10 @@ export default function ProfilePage() {
                           <Button
                             type="submit"
                             variant="contained"
-                            color="warning"
-                            disabled={isChangingPassword}
+                            color="primary"
+                            disabled={isChangingPassword || passwordFormik.isSubmitting}
                           >
-                            {isChangingPassword ? 'Changing...' : 'Change Password'}
+                            {isChangingPassword || passwordFormik.isSubmitting ? 'Changing...' : 'Update Password'}
                           </Button>
                         </Stack>
                       </Grid>

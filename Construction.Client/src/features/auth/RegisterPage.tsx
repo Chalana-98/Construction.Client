@@ -15,41 +15,65 @@ import {
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ConstructionIcon from '@mui/icons-material/Construction';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { useRegisterMutation } from '@/features/auth/api';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/authSlice';
 
+const registerValidationSchema = Yup.object({
+  companyName: Yup.string()
+    .min(2, 'Company name must be at least 2 characters.')
+    .required('Company name is required.'),
+  subdomain: Yup.string()
+    .matches(/^[a-z0-9-]+$/, 'Only lowercase letters, numbers, and hyphens allowed.')
+    .min(2, 'Subdomain must be at least 2 characters.')
+    .required('Subdomain is required.'),
+  firstName: Yup.string()
+    .min(2, 'First name must be at least 2 characters.')
+    .required('First name is required.'),
+  lastName: Yup.string()
+    .min(2, 'Last name must be at least 2 characters.')
+    .required('Last name is required.'),
+  email: Yup.string()
+    .email('Please enter a valid email address.')
+    .required('Email address is required.'),
+  password: Yup.string()
+    .min(8, 'Password must be at least 8 characters.')
+    .required('Password is required.'),
+  contactPhone: Yup.string().optional(),
+});
+
 export default function RegisterPage() {
-  const [form, setForm] = useState({
-    companyName: '',
-    subdomain: '',
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    contactPhone: '',
-  });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [register, { isLoading }] = useRegisterMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const update = (field: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm((prev) => ({ ...prev, [field]: e.target.value }));
-  };
-
-  const handleSubmit = (e: { preventDefault: () => void }) => {
-    e.preventDefault();
-    setError('');
-    register(form).unwrap().then((result) => {
-      dispatch(setCredentials(result));
-      navigate('/');
-    }).catch((err: unknown) => {
-      const apiErr = err as { data?: { error?: string } };
-      setError(apiErr.data?.error ?? 'Registration failed. Please try again.');
-    });
-  };
+  const formik = useFormik({
+    initialValues: {
+      companyName: '',
+      subdomain: '',
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
+      contactPhone: '',
+    },
+    validationSchema: registerValidationSchema,
+    onSubmit: async (values) => {
+      setError('');
+      try {
+        const result = await register(values).unwrap();
+        dispatch(setCredentials(result));
+        navigate('/');
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { error?: string } };
+        setError(apiErr.data?.error ?? 'Registration failed. Please try again.');
+      }
+    },
+  });
 
   return (
     <Box
@@ -78,64 +102,92 @@ export default function RegisterPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={formik.handleSubmit}>
             <Grid container spacing={2}>
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
+                  id="companyName"
+                  name="companyName"
                   label="Company Name"
-                  value={form.companyName}
-                  onChange={update('companyName')}
+                  value={formik.values.companyName}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.companyName && Boolean(formik.errors.companyName)}
+                  helperText={formik.touched.companyName && formik.errors.companyName}
                   required
                 />
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
+                  id="subdomain"
+                  name="subdomain"
                   label="Subdomain"
-                  value={form.subdomain}
-                  onChange={update('subdomain')}
+                  value={formik.values.subdomain}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.subdomain && Boolean(formik.errors.subdomain)}
+                  helperText={(formik.touched.subdomain && formik.errors.subdomain) || 'Only lowercase letters, numbers, and hyphens'}
                   required
-                  helperText="Only lowercase letters, numbers and hyphens"
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
+                  id="firstName"
+                  name="firstName"
                   label="First Name"
-                  value={form.firstName}
-                  onChange={update('firstName')}
+                  value={formik.values.firstName}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.firstName && Boolean(formik.errors.firstName)}
+                  helperText={formik.touched.firstName && formik.errors.firstName}
                   required
                 />
               </Grid>
               <Grid size={{ xs: 12, sm: 6 }}>
                 <TextField
                   fullWidth
+                  id="lastName"
+                  name="lastName"
                   label="Last Name"
-                  value={form.lastName}
-                  onChange={update('lastName')}
+                  value={formik.values.lastName}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.lastName && Boolean(formik.errors.lastName)}
+                  helperText={formik.touched.lastName && formik.errors.lastName}
                   required
                 />
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
+                  id="email"
+                  name="email"
                   label="Email"
                   type="email"
-                  value={form.email}
-                  onChange={update('email')}
+                  value={formik.values.email}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.email && Boolean(formik.errors.email)}
+                  helperText={formik.touched.email && formik.errors.email}
                   required
                 />
               </Grid>
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
+                  id="password"
+                  name="password"
                   label="Password"
                   type={showPassword ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={update('password')}
+                  value={formik.values.password}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
+                  error={formik.touched.password && Boolean(formik.errors.password)}
+                  helperText={(formik.touched.password && formik.errors.password) || 'Min 8 chars, with upper, lower, number & special char'}
                   required
-                  helperText="Min 8 chars, with upper, lower, number & special char"
                   slotProps={{
                     input: {
                       endAdornment: (
@@ -152,9 +204,12 @@ export default function RegisterPage() {
               <Grid size={{ xs: 12 }}>
                 <TextField
                   fullWidth
+                  id="contactPhone"
+                  name="contactPhone"
                   label="Contact Phone (optional)"
-                  value={form.contactPhone}
-                  onChange={update('contactPhone')}
+                  value={formik.values.contactPhone}
+                  onChange={formik.handleChange}
+                  onBlur={formik.handleBlur}
                 />
               </Grid>
             </Grid>
@@ -165,9 +220,9 @@ export default function RegisterPage() {
               variant="contained"
               size="large"
               sx={{ mt: 3, mb: 2, py: 1.5 }}
-              disabled={isLoading}
+              disabled={isLoading || formik.isSubmitting}
             >
-              {isLoading ? 'Creating Account...' : 'Create Account'}
+              {isLoading || formik.isSubmitting ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
 

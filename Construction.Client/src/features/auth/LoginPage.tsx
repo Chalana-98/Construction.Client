@@ -8,6 +8,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import BoltIcon from '@mui/icons-material/Bolt';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { useLoginMutation } from '@/features/auth/api';
 import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/authSlice';
@@ -26,26 +28,39 @@ const DEMO_AUTH: AuthResponse = {
 };
 // ────────────────────────────────────────────────────────────────────────────
 
+const loginValidationSchema = Yup.object({
+  email: Yup.string()
+    .email('Please enter a valid email address.')
+    .required('Email address is required.'),
+  password: Yup.string()
+    .required('Password is required.'),
+});
+
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [login, { isLoading }] = useLoginMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: { preventDefault: () => void }) => {
-    e.preventDefault();
-    setError('');
-    login({ email, password }).unwrap().then((result) => {
-      dispatch(setCredentials(result));
-      navigate('/');
-    }).catch((err: unknown) => {
-      const apiErr = err as { data?: { error?: string } };
-      setError(apiErr.data?.error ?? 'Login failed. Please check your credentials.');
-    });
-  };
+  const formik = useFormik({
+    initialValues: {
+      email: '',
+      password: '',
+    },
+    validationSchema: loginValidationSchema,
+    onSubmit: async (values) => {
+      setError('');
+      try {
+        const result = await login(values).unwrap();
+        dispatch(setCredentials(result));
+        navigate('/');
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { error?: string } };
+        setError(apiErr.data?.error ?? 'Login failed. Please check your credentials.');
+      }
+    },
+  });
 
   const handleDemoLogin = () => {
     dispatch(setCredentials(DEMO_AUTH));
@@ -105,17 +120,35 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={formik.handleSubmit}>
             <TextField
-              fullWidth label="Email" type="email"
-              value={email} onChange={(e) => setEmail(e.target.value)}
-              margin="normal" required autoFocus
+              fullWidth
+              id="email"
+              name="email"
+              label="Email"
+              type="email"
+              value={formik.values.email}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.email && Boolean(formik.errors.email)}
+              helperText={formik.touched.email && formik.errors.email}
+              margin="normal"
+              required
+              autoFocus
             />
             <TextField
-              fullWidth label="Password"
+              fullWidth
+              id="password"
+              name="password"
+              label="Password"
               type={showPassword ? 'text' : 'password'}
-              value={password} onChange={(e) => setPassword(e.target.value)}
-              margin="normal" required
+              value={formik.values.password}
+              onChange={formik.handleChange}
+              onBlur={formik.handleBlur}
+              error={formik.touched.password && Boolean(formik.errors.password)}
+              helperText={formik.touched.password && formik.errors.password}
+              margin="normal"
+              required
               slotProps={{
                 input: {
                   endAdornment: (
@@ -130,9 +163,9 @@ export default function LoginPage() {
             />
             <Button
               type="submit" fullWidth variant="outlined" size="large"
-              sx={{ mt: 3, mb: 2, py: 1.5 }} disabled={isLoading}
+              sx={{ mt: 3, mb: 2, py: 1.5 }} disabled={isLoading || formik.isSubmitting}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading || formik.isSubmitting ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
 

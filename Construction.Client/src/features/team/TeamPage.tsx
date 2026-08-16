@@ -7,6 +7,8 @@ import {
 import PersonOffIcon from '@mui/icons-material/PersonOff';
 import PersonIcon from '@mui/icons-material/Person';
 import DeleteIcon from '@mui/icons-material/Delete';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import {
   useGetProjectMembersQuery, useAddProjectMemberMutation,
   useRemoveProjectMemberMutation, useDeactivateProjectMemberMutation,
@@ -33,6 +35,20 @@ const roleColor: Record<string, 'default' | 'primary' | 'secondary' | 'warning' 
 
 const emptyForm = { projectId: '', userId: '', role: 'Worker', dailyRate: '', notes: '' };
 
+const teamValidationSchema = Yup.object({
+  projectId: Yup.string()
+    .required('Project selection is required.'),
+  userId: Yup.string()
+    .required('User ID is required.'),
+  role: Yup.string()
+    .required('Role is required.'),
+
+  dailyRate: Yup.number()
+    .typeError('Daily rate must be a number.')
+    .min(0, 'Daily rate cannot be negative.')
+    .optional(),
+});
+
 export default function TeamPage() {
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState('');
@@ -50,52 +66,76 @@ export default function TeamPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selected, setSelected] = useState<ProjectMemberDto | null>(null);
-  const [form, setForm] = useState(emptyForm);
 
-  const handleAdd = async () => {
-    try {
-      await addMember({
-        projectId: form.projectId,
-        userId: form.userId,
-        role: form.role,
-        dailyRate: form.dailyRate ? Number(form.dailyRate) : undefined,
-        notes: form.notes || undefined,
-      }).unwrap();
-      enqueueSnackbar('Member added', { variant: 'success' });
-      setFormOpen(false);
-      setForm(emptyForm);
-    } catch {
-      enqueueSnackbar('Failed to add member', { variant: 'error' });
-    }
+  const formik = useFormik({
+    initialValues: emptyForm,
+    validationSchema: teamValidationSchema,
+    onSubmit: async (values, { setErrors }) => {
+      try {
+        await addMember({
+          projectId: values.projectId,
+          userId: values.userId.trim(),
+          role: values.role,
+          dailyRate: values.dailyRate ? Number(values.dailyRate) : undefined,
+          notes: values.notes.trim() || undefined,
+        }).unwrap();
+        enqueueSnackbar('Member added successfully', { variant: 'success' });
+        handleCloseForm();
+      } catch (err: unknown) {
+        const apiErr = err as { data?: { message?: string; errors?: Record<string, string[]> } };
+        if (apiErr?.data?.errors) {
+          const sErrors: Record<string, string> = {};
+          Object.entries(apiErr.data.errors).forEach(([k, msgs]) => {
+            sErrors[k.charAt(0).toLowerCase() + k.slice(1)] = msgs.join(', ');
+          });
+          setErrors(sErrors);
+        }
+        enqueueSnackbar(apiErr?.data?.message || 'Failed to add member', { variant: 'error' });
+      }
+    },
+  });
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setSelected(null);
+    formik.resetForm({ values: emptyForm });
+  };
+
+  const handleOpenAdd = () => {
+    setSelected(null);
+    formik.resetForm({ values: emptyForm });
+    setFormOpen(true);
   };
 
   const handleRemove = async () => {
     if (!selected) return;
     try {
       await removeMember(selected.id).unwrap();
-      enqueueSnackbar('Member removed', { variant: 'success' });
+      enqueueSnackbar('Member removed successfully', { variant: 'success' });
       setDeleteOpen(false);
+      setSelected(null);
     } catch {
       enqueueSnackbar('Failed to remove member', { variant: 'error' });
     }
   };
 
-  const handleToggleActive = async (member: ProjectMemberDto) => {
+  const handleDeactivate = async (id: string) => {
     try {
-      if (member.isActive) {
-        await deactivate(member.id).unwrap();
-        enqueueSnackbar('Member deactivated', { variant: 'info' });
-      } else {
-        await reactivate(member.id).unwrap();
-        enqueueSnackbar('Member reactivated', { variant: 'success' });
-      }
+      await deactivate(id).unwrap();
+      enqueueSnackbar('Member deactivated', { variant: 'warning' });
     } catch {
-      enqueueSnackbar('Action failed', { variant: 'error' });
+      enqueueSnackbar('Failed to deactivate member', { variant: 'error' });
     }
   };
 
-  const upd = (f: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm((p) => ({ ...p, [f]: e.target.value }));
+  const handleReactivate = async (id: string) => {
+    try {
+      await reactivate(id).unwrap();
+      enqueueSnackbar('Member reactivated', { variant: 'success' });
+    } catch {
+      enqueueSnackbar('Failed to reactivate member', { variant: 'error' });
+    }
+  };
 
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
@@ -105,17 +145,21 @@ export default function TeamPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flexGrow: 1, minHeight: 'calc(100vh - 120px)' }}>
       <PageHeader
-        title="Team Members"
-        actionLabel={hasItems ? "Add Member" : undefined}
-        onAction={hasItems ? () => { setForm(emptyForm); setFormOpen(true); } : undefined}
+        title="Project Team"
+        subtitle="Manage engineers, site supervisors, and personnel assignment per project"
+        actionLabel={hasItems ? 'Add Member' : undefined}
+        onAction={hasItems ? handleOpenAdd : undefined}
       />
 
-      {(hasItems || roleFilter) && (
-        <Box display="flex" gap={2} mb={3}>
+      {hasItems && (
+        <Box display="flex" gap={2} mb={2}>
           <TextField
-            size="small" select label="Role" value={roleFilter}
+            select
+            size="small"
+            label="Role"
+            value={roleFilter}
             onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-            sx={{ minWidth: 150 }}
+            sx={{ minWidth: 160 }}
           >
             <MenuItem value="">All Roles</MenuItem>
             {ROLES.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
@@ -124,60 +168,45 @@ export default function TeamPage() {
       )}
 
       {hasItems && (
-        <Card>
-          <TableContainer>
+        <Card sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+          <TableContainer sx={{ flexGrow: 1 }}>
             <Table>
               <TableHead>
                 <TableRow>
                   <TableCell>Member</TableCell>
                   <TableCell>Email</TableCell>
-                  <TableCell>Job Title</TableCell>
                   <TableCell>Role</TableCell>
-                  <TableCell>Daily Rate</TableCell>
-                  <TableCell>Joined</TableCell>
                   <TableCell>Status</TableCell>
+                  <TableCell align="right">Daily Rate</TableCell>
+                  <TableCell>Assigned</TableCell>
                   <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {data?.items.map((m) => (
-                  <TableRow key={m.id} hover sx={{ opacity: m.isActive ? 1 : 0.6 }}>
+                  <TableRow key={m.id}>
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={1.5}>
-                        <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>
-                          {m.userName?.charAt(0).toUpperCase() ?? '?'}
+                        <Avatar sx={{ width: 32, height: 32, fontSize: 13 }}>
+                          {m.userName.slice(0, 2).toUpperCase()}
                         </Avatar>
-                        <Typography fontWeight={500}>{m.userName}</Typography>
+                        <Typography fontWeight={500} variant="body2">{m.userName}</Typography>
                       </Box>
                     </TableCell>
                     <TableCell>{m.userEmail}</TableCell>
-                    <TableCell>{m.userJobTitle ?? '—'}</TableCell>
+                    <TableCell><Chip label={m.role} size="small" color={roleColor[m.role] ?? 'default'} /></TableCell>
                     <TableCell>
-                      <Chip label={m.role} size="small" color={roleColor[m.role] ?? 'default'} />
+                      <Chip label={m.isActive ? 'Active' : 'Inactive'} size="small" color={m.isActive ? 'success' : 'default'} />
                     </TableCell>
-                    <TableCell>
-                      {m.dailyRate ? `$${m.dailyRate.toLocaleString()}` : '—'}
-                    </TableCell>
+                    <TableCell align="right">{m.dailyRate ? `$${m.dailyRate}/day` : '—'}</TableCell>
                     <TableCell>{new Date(m.joinedDate).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={m.isActive ? 'Active' : 'Inactive'}
-                        size="small"
-                        color={m.isActive ? 'success' : 'default'}
-                        variant={m.isActive ? 'filled' : 'outlined'}
-                      />
-                    </TableCell>
                     <TableCell align="right">
-                      <Tooltip title={m.isActive ? 'Deactivate' : 'Reactivate'}>
-                        <IconButton size="small" onClick={() => handleToggleActive(m)}>
-                          {m.isActive ? <PersonOffIcon fontSize="small" /> : <PersonIcon fontSize="small" color="success" />}
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Remove">
-                        <IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}>
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                      {m.isActive ? (
+                        <Tooltip title="Deactivate"><IconButton size="small" color="warning" onClick={() => handleDeactivate(m.id)}><PersonOffIcon fontSize="small" /></IconButton></Tooltip>
+                      ) : (
+                        <Tooltip title="Reactivate"><IconButton size="small" color="success" onClick={() => handleReactivate(m.id)}><PersonIcon fontSize="small" /></IconButton></Tooltip>
+                      )}
+                      <Tooltip title="Remove"><IconButton size="small" color="error" onClick={() => { setSelected(m); setDeleteOpen(true); }}><DeleteIcon fontSize="small" /></IconButton></Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -191,72 +220,125 @@ export default function TeamPage() {
         <Card sx={{ flexGrow: 1, minHeight: 'calc(100vh - 180px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <EmptyState
             icon={<GroupIcon />}
-            title="No team members yet!"
-            description="Add workers, managers, or viewers to collaborate on your construction projects."
+            title="No team members assigned yet!"
+            description="Assign site supervisors, project managers, and trade specialists to projects."
             actionLabel="Add Member"
-            onAction={() => { setForm(emptyForm); setFormOpen(true); }}
+            onAction={handleOpenAdd}
           />
         </Card>
       )}
-
       {data && data.totalPages > 1 && (
         <Box display="flex" justifyContent="center" mt={3}>
           <Pagination count={data.totalPages} page={page} onChange={(_e, v) => setPage(v)} color="primary" />
         </Box>
       )}
 
-      {/* Add Member Dialog */}
-      <Dialog open={formOpen} onClose={() => setFormOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Team Member</DialogTitle>
+      <Dialog open={formOpen} onClose={handleCloseForm} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>Add Team Member</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ pt: 1 }}>
             <Grid size={{ xs: 12 }}>
-              {projectsData?.items && projectsData.items.length > 0 ? (
-                <TextField
-                  fullWidth
-                  select
-                  label="Project"
-                  value={form.projectId}
-                  onChange={upd('projectId')}
-                  required
-                  helperText="Select the project"
-                >
-                  {projectsData.items.map((p) => (
-                    <MenuItem key={p.id} value={p.id}>
-                      {p.name} ({p.projectCode})
-                    </MenuItem>
-                  ))}
-                </TextField>
-              ) : (
-                <TextField fullWidth label="Project ID" value={form.projectId} onChange={upd('projectId')} required helperText="Enter the project ID" />
-              )}
+              <TextField
+                fullWidth
+                select
+                id="projectId"
+                name="projectId"
+                label="Project"
+                value={formik.values.projectId}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                required
+                error={formik.touched.projectId && Boolean(formik.errors.projectId)}
+                helperText={formik.touched.projectId && formik.errors.projectId}
+              >
+                <MenuItem value="" disabled>Select project...</MenuItem>
+                {projectsData?.items?.map((p) => (
+                  <MenuItem key={p.id} value={p.id}>
+                    {p.name} ({p.projectCode})
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="User ID" value={form.userId} onChange={upd('userId')} required helperText="Enter the user ID" />
+              <TextField
+                fullWidth
+                id="userId"
+                name="userId"
+                label="User ID"
+                value={formik.values.userId}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                required
+                error={formik.touched.userId && Boolean(formik.errors.userId)}
+                helperText={formik.touched.userId && formik.errors.userId}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth select label="Role" value={form.role} onChange={upd('role')}>
+              <TextField
+                fullWidth
+                select
+                id="role"
+                name="role"
+                label="Role"
+                value={formik.values.role}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                required
+                error={formik.touched.role && Boolean(formik.errors.role)}
+                helperText={formik.touched.role && formik.errors.role}
+              >
                 {ROLES.map((r) => <MenuItem key={r} value={r}>{r}</MenuItem>)}
               </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField fullWidth label="Daily Rate ($)" type="number" value={form.dailyRate} onChange={upd('dailyRate')} />
+              <TextField
+                fullWidth
+                id="dailyRate"
+                name="dailyRate"
+                label="Daily Rate ($)"
+                type="number"
+                value={formik.values.dailyRate}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                error={formik.touched.dailyRate && Boolean(formik.errors.dailyRate)}
+                helperText={formik.touched.dailyRate && formik.errors.dailyRate}
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
-              <TextField fullWidth label="Notes" value={form.notes} onChange={upd('notes')} multiline rows={2} />
+              <TextField
+                fullWidth
+                id="notes"
+                name="notes"
+                label="Notes"
+                value={formik.values.notes}
+                onChange={formik.handleChange}
+                onBlur={formik.handleBlur}
+                multiline
+                rows={2}
+              />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setFormOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleAdd} disabled={adding}>Add Member</Button>
+          <Button onClick={handleCloseForm}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={() => formik.handleSubmit()}
+            disabled={adding || formik.isSubmitting}
+          >
+            Add Member
+          </Button>
         </DialogActions>
       </Dialog>
 
       <ConfirmDialog
-        open={deleteOpen} title="Remove Team Member"
+        open={deleteOpen}
+        title="Remove Team Member"
         message={`Remove "${selected?.userName}" from the project?`}
-        confirmText="Remove" onConfirm={handleRemove} onCancel={() => setDeleteOpen(false)} loading={removing}
+        confirmText="Remove"
+        onConfirm={handleRemove}
+        onCancel={() => setDeleteOpen(false)}
+        loading={removing}
       />
     </Box>
   );
