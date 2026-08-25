@@ -29,7 +29,6 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ConstructionIcon from '@mui/icons-material/Construction';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import DescriptionIcon from '@mui/icons-material/Description';
-import FlagIcon from '@mui/icons-material/Flag';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import LogoutIcon from '@mui/icons-material/Logout';
 import PersonIcon from '@mui/icons-material/Person';
@@ -38,27 +37,56 @@ import QuestionAnswerIcon from '@mui/icons-material/QuestionAnswer';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import StoreIcon from '@mui/icons-material/Store';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import PriceCheckIcon from '@mui/icons-material/PriceCheck';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import MoveToInboxIcon from '@mui/icons-material/MoveToInbox';
+import WarehouseIcon from '@mui/icons-material/Warehouse';
+import SpeedIcon from '@mui/icons-material/Speed';
+import ViewTimelineIcon from '@mui/icons-material/ViewTimeline';
+import RequestQuoteIcon from '@mui/icons-material/RequestQuote';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
+import HandshakeIcon from '@mui/icons-material/Handshake';
+import HowToRegIcon from '@mui/icons-material/HowToReg';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import BuildCircleIcon from '@mui/icons-material/BuildCircle';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { logout } from '@/store/authSlice';
 
 const DRAWER_WIDTH = 260;
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: <DashboardIcon /> },
+  { path: '/', label: 'Overview', icon: <DashboardIcon /> },
+  { path: '/kpi-dashboard', label: 'KPI Dashboard', icon: <AssessmentIcon /> },
+  { path: '/approvals', label: 'Approvals Inbox', icon: <HowToRegIcon /> },
   { path: '/projects', label: 'Projects', icon: <BusinessIcon /> },
-  { path: '/tasks', label: 'My Tasks', icon: <TaskAltIcon /> },
-  { path: '/team', label: 'Team', icon: <PeopleIcon /> },
+  { path: '/wbs', label: 'WBS Hierarchy', icon: <AccountTreeIcon /> },
+  { path: '/cost-control', label: 'Cost Codes & Budget', icon: <PriceCheckIcon /> },
+  { path: '/schedule', label: 'Gantt Schedule', icon: <ViewTimelineIcon /> },
+  { path: '/physical-progress', label: 'Physical Progress', icon: <SpeedIcon /> },
+  { path: '/procurement', label: 'Procurement Reqs', icon: <ShoppingCartIcon /> },
+  { path: '/purchase-orders', label: 'Purchase Orders', icon: <ReceiptLongIcon /> },
+  { path: '/material-requests', label: 'Material Requests', icon: <MoveToInboxIcon /> },
+  { path: '/inventory-ledger', label: 'Inventory Ledger', icon: <WarehouseIcon /> },
+  { path: '/billing', label: 'Project Billing', icon: <RequestQuoteIcon /> },
+  { path: '/subcontracts', label: 'Subcontracts', icon: <HandshakeIcon /> },
+  { path: '/safety', label: 'Safety & HSE', icon: <HealthAndSafetyIcon /> },
+  { path: '/quality', label: 'Quality & QA/QC', icon: <FactCheckIcon /> },
+  { path: '/equipment-maintenance', label: 'Asset Maintenance', icon: <BuildCircleIcon /> },
+  { path: '/tasks', label: 'Tasks', icon: <TaskAltIcon /> },
   { path: '/daily-logs', label: 'Daily Logs', icon: <CalendarMonthIcon /> },
   { path: '/expenses', label: 'Expenses', icon: <AttachMoneyIcon /> },
-  { path: '/equipment', label: 'Equipment', icon: <ConstructionIcon /> },
-  { path: '/materials', label: 'Materials', icon: <InventoryIcon /> },
+  { path: '/equipment', label: 'Equipment List', icon: <ConstructionIcon /> },
+  { path: '/materials', label: 'Material Catalog', icon: <InventoryIcon /> },
   { path: '/documents', label: 'Documents', icon: <DescriptionIcon /> },
-  { path: '/milestones', label: 'Milestones', icon: <FlagIcon /> },
-  { path: '/issues', label: 'Issues', icon: <BugReportIcon /> },
+  { path: '/issues', label: 'Site Issues', icon: <BugReportIcon /> },
   { path: '/rfis', label: 'RFIs', icon: <QuestionAnswerIcon /> },
   { path: '/change-orders', label: 'Change Orders', icon: <EditNoteIcon /> },
   { path: '/vendors', label: 'Vendors', icon: <StoreIcon /> },
   { path: '/timesheets', label: 'Timesheets', icon: <AccessTimeIcon /> },
+  { path: '/team', label: 'Team', icon: <PeopleIcon /> },
 ];
 
 export default function AppLayout() {

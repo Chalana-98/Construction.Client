@@ -1272,3 +1272,1170 @@ export interface CreateTimesheetEntryDto {
   projectTaskId?: string;
 }
 
+// ============================================
+// Enterprise Construction ERP Types
+// ============================================
+
+// 1. Cost Codes & Cost Control
+export enum CostCodeCategory {
+  Labor = 1,
+  Materials = 2,
+  Equipment = 3,
+  Subcontractor = 4,
+  SiteOverhead = 5,
+  Permits = 6,
+  Other = 7,
+}
+
+export const CostCodeCategoryLabels: Record<CostCodeCategory, string> = {
+  [CostCodeCategory.Labor]: 'Labor',
+  [CostCodeCategory.Materials]: 'Materials',
+  [CostCodeCategory.Equipment]: 'Equipment',
+  [CostCodeCategory.Subcontractor]: 'Subcontractor',
+  [CostCodeCategory.SiteOverhead]: 'Site Overhead',
+  [CostCodeCategory.Permits]: 'Permits',
+  [CostCodeCategory.Other]: 'Other',
+};
+
+export interface CostCodeDto {
+  id: string;
+  projectId: string;
+  code: string;
+  name: string;
+  description?: string;
+  category: CostCodeCategory;
+  categoryName: string;
+  originalBudget: number;
+  committedCost: number;
+  actualCost: number;
+  remainingBudget: number;
+  forecastCost: number;
+  budgetVariance: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreateCostCodeRequest {
+  projectId: string;
+  code: string;
+  name: string;
+  description?: string;
+  category?: CostCodeCategory;
+  originalBudget?: number;
+  forecastCost?: number;
+  notes?: string;
+}
+
+export interface UpdateCostCodeRequest {
+  name: string;
+  description?: string;
+  category: CostCodeCategory;
+  originalBudget: number;
+  forecastCost: number;
+  notes?: string;
+}
+
+export interface ProjectCostControlSummaryDto {
+  projectId: string;
+  projectName: string;
+  totalOriginalBudget: number;
+  totalCommittedCost: number;
+  totalActualCost: number;
+  totalRemainingBudget: number;
+  totalForecastCost: number;
+  totalVariance: number;
+  costCodes: CostCodeDto[];
+}
+
+// 2. WBS
+export enum WbsStatus {
+  Planned = 1,
+  InProgress = 2,
+  Completed = 3,
+  OnHold = 4,
+  Delayed = 5,
+}
+
+export const WbsStatusLabels: Record<WbsStatus, string> = {
+  [WbsStatus.Planned]: 'Planned',
+  [WbsStatus.InProgress]: 'In Progress',
+  [WbsStatus.Completed]: 'Completed',
+  [WbsStatus.OnHold]: 'On Hold',
+  [WbsStatus.Delayed]: 'Delayed',
+};
+
+export interface WbsNodeDto {
+  id: string;
+  projectId: string;
+  wbsCode: string;
+  name: string;
+  description?: string;
+  parentWbsId?: string;
+  startDate?: string;
+  endDate?: string;
+  responsiblePersonId?: string;
+  responsiblePersonName?: string;
+  budget: number;
+  rolledUpBudget: number;
+  costCodeId?: string;
+  costCodeName?: string;
+  progressPercentage: number;
+  status: WbsStatus;
+  statusName: string;
+  children: WbsNodeDto[];
+  createdAt: string;
+}
+
+export interface CreateWbsNodeRequest {
+  projectId: string;
+  wbsCode: string;
+  name: string;
+  description?: string;
+  parentWbsId?: string;
+  startDate?: string;
+  endDate?: string;
+  responsiblePersonId?: string;
+  budget?: number;
+  costCodeId?: string;
+  progressPercentage?: number;
+  status?: WbsStatus;
+}
+
+export interface UpdateWbsNodeRequest {
+  name: string;
+  description?: string;
+  parentWbsId?: string;
+  startDate?: string;
+  endDate?: string;
+  responsiblePersonId?: string;
+  budget: number;
+  costCodeId?: string;
+  progressPercentage: number;
+  status: WbsStatus;
+}
+
+// 3. Procurement
+export enum ProcurementStatus {
+  Draft = 1,
+  Submitted = 2,
+  Approved = 3,
+  Ordered = 4,
+  PartiallyReceived = 5,
+  Fulfilled = 6,
+  Cancelled = 7,
+}
+
+export const ProcurementStatusLabels: Record<ProcurementStatus, string> = {
+  [ProcurementStatus.Draft]: 'Draft',
+  [ProcurementStatus.Submitted]: 'Submitted',
+  [ProcurementStatus.Approved]: 'Approved',
+  [ProcurementStatus.Ordered]: 'Ordered',
+  [ProcurementStatus.PartiallyReceived]: 'Partially Received',
+  [ProcurementStatus.Fulfilled]: 'Fulfilled',
+  [ProcurementStatus.Cancelled]: 'Cancelled',
+};
+
+export interface ProcurementRequestDto {
+  id: string;
+  requestNumber: string;
+  projectId: string;
+  projectName?: string;
+  wbsId?: string;
+  wbsName?: string;
+  costCodeId?: string;
+  costCodeName?: string;
+  requestedById: string;
+  requestedByName?: string;
+  vendorId?: string;
+  vendorName?: string;
+  requiredDate: string;
+  priority: string;
+  status: ProcurementStatus;
+  statusName: string;
+  estimatedTotalCost: number;
+  notes?: string;
+  items: ProcurementRequestItemDto[];
+  createdAt: string;
+}
+
+export interface ProcurementRequestItemDto {
+  id: string;
+  procurementRequestId: string;
+  materialId?: string;
+  materialName?: string;
+  description: string;
+  quantity: number;
+  unit: string;
+  estimatedUnitPrice: number;
+  estimatedTotal: number;
+  notes?: string;
+}
+
+export interface CreateProcurementRequest {
+  projectId: string;
+  wbsId?: string;
+  costCodeId?: string;
+  vendorId?: string;
+  requiredDate: string;
+  priority?: string;
+  notes?: string;
+  items: {
+    materialId?: string;
+    description: string;
+    quantity: number;
+    unit: string;
+    estimatedUnitPrice: number;
+    notes?: string;
+  }[];
+}
+
+export interface UpdateProcurementRequest {
+  wbsId?: string;
+  costCodeId?: string;
+  vendorId?: string;
+  requiredDate?: string;
+  priority?: string;
+  notes?: string;
+}
+
+// 4. Purchase Orders
+export enum PurchaseOrderStatus {
+  Draft = 1,
+  PendingApproval = 2,
+  Approved = 3,
+  PartiallyReceived = 4,
+  FullyReceived = 5,
+  Closed = 6,
+  Cancelled = 7,
+}
+
+export const PurchaseOrderStatusLabels: Record<PurchaseOrderStatus, string> = {
+  [PurchaseOrderStatus.Draft]: 'Draft',
+  [PurchaseOrderStatus.PendingApproval]: 'Pending Approval',
+  [PurchaseOrderStatus.Approved]: 'Approved',
+  [PurchaseOrderStatus.PartiallyReceived]: 'Partially Received',
+  [PurchaseOrderStatus.FullyReceived]: 'Fully Received',
+  [PurchaseOrderStatus.Closed]: 'Closed',
+  [PurchaseOrderStatus.Cancelled]: 'Cancelled',
+};
+
+export interface PurchaseOrderDto {
+  id: string;
+  poNumber: string;
+  vendorId: string;
+  vendorName?: string;
+  projectId: string;
+  projectName?: string;
+  wbsId?: string;
+  wbsName?: string;
+  costCodeId?: string;
+  costCodeName?: string;
+  procurementRequestId?: string;
+  deliveryLocation: string;
+  requestedDate: string;
+  expectedDeliveryDate?: string;
+  paymentTerms: string;
+  currency: string;
+  subtotalAmount: number;
+  taxAmount: number;
+  totalAmount: number;
+  status: PurchaseOrderStatus;
+  statusName: string;
+  notes?: string;
+  approvedById?: string;
+  approvedByName?: string;
+  approvedAt?: string;
+  items: PurchaseOrderItemDto[];
+  createdAt: string;
+}
+
+export interface PurchaseOrderItemDto {
+  id: string;
+  purchaseOrderId: string;
+  materialId?: string;
+  materialName?: string;
+  description: string;
+  quantity: number;
+  receivedQuantity: number;
+  unit: string;
+  unitPrice: number;
+  taxRate: number;
+  totalPrice: number;
+}
+
+export interface CreatePurchaseOrderRequest {
+  vendorId: string;
+  projectId: string;
+  wbsId?: string;
+  costCodeId?: string;
+  procurementRequestId?: string;
+  deliveryLocation: string;
+  requestedDate: string;
+  expectedDeliveryDate?: string;
+  paymentTerms?: string;
+  currency?: string;
+  notes?: string;
+  items: {
+    materialId?: string;
+    description: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    taxRate?: number;
+  }[];
+}
+
+export interface ReceivePurchaseOrderGoodsRequest {
+  receiptDate?: string;
+  location?: string;
+  notes?: string;
+  items: {
+    purchaseOrderItemId: string;
+    receivedQuantity: number;
+    unitCost?: number;
+    location?: string;
+  }[];
+}
+
+// 5. Material Requests
+export enum MaterialRequestStatus {
+  Draft = 1,
+  Submitted = 2,
+  Approved = 3,
+  Procurement = 4,
+  Received = 5,
+  Issued = 6,
+  Rejected = 7,
+  Cancelled = 8,
+}
+
+export const MaterialRequestStatusLabels: Record<MaterialRequestStatus, string> = {
+  [MaterialRequestStatus.Draft]: 'Draft',
+  [MaterialRequestStatus.Submitted]: 'Submitted',
+  [MaterialRequestStatus.Approved]: 'Approved',
+  [MaterialRequestStatus.Procurement]: 'Procurement',
+  [MaterialRequestStatus.Received]: 'Received',
+  [MaterialRequestStatus.Issued]: 'Issued',
+  [MaterialRequestStatus.Rejected]: 'Rejected',
+  [MaterialRequestStatus.Cancelled]: 'Cancelled',
+};
+
+export interface MaterialRequestDto {
+  id: string;
+  requestNumber: string;
+  projectId: string;
+  projectName?: string;
+  wbsId?: string;
+  wbsName?: string;
+  costCodeId?: string;
+  costCodeName?: string;
+  requestedById: string;
+  requestedByName?: string;
+  requiredDate: string;
+  priority: string;
+  status: MaterialRequestStatus;
+  statusName: string;
+  reason?: string;
+  notes?: string;
+  items: MaterialRequestItemDto[];
+  createdAt: string;
+}
+
+export interface MaterialRequestItemDto {
+  id: string;
+  materialRequestId: string;
+  materialId: string;
+  materialName?: string;
+  requestedQuantity: number;
+  issuedQuantity: number;
+  unit: string;
+  notes?: string;
+}
+
+export interface CreateMaterialRequest {
+  projectId: string;
+  wbsId?: string;
+  costCodeId?: string;
+  requiredDate: string;
+  priority?: string;
+  reason?: string;
+  notes?: string;
+  items: {
+    materialId: string;
+    requestedQuantity: number;
+    unit: string;
+    notes?: string;
+  }[];
+}
+
+// 6. Inventory Transactions
+export enum InventoryTransactionType {
+  OpeningStock = 1,
+  PurchaseReceipt = 2,
+  TransferIn = 3,
+  MaterialIssue = 4,
+  TransferOut = 5,
+  Adjustment = 6,
+}
+
+export const InventoryTransactionTypeLabels: Record<InventoryTransactionType, string> = {
+  [InventoryTransactionType.OpeningStock]: 'Opening Stock',
+  [InventoryTransactionType.PurchaseReceipt]: 'Purchase Receipt',
+  [InventoryTransactionType.TransferIn]: 'Transfer In',
+  [InventoryTransactionType.MaterialIssue]: 'Material Issue',
+  [InventoryTransactionType.TransferOut]: 'Transfer Out',
+  [InventoryTransactionType.Adjustment]: 'Adjustment',
+};
+
+export interface InventoryTransactionDto {
+  id: string;
+  projectId: string;
+  projectName?: string;
+  materialId: string;
+  materialName?: string;
+  transactionType: InventoryTransactionType;
+  transactionTypeName: string;
+  quantity: number;
+  unit: string;
+  unitCost: number;
+  totalCost: number;
+  location: string;
+  referenceNumber: string;
+  costCodeId?: string;
+  costCodeName?: string;
+  wbsId?: string;
+  wbsName?: string;
+  transactionDate: string;
+  userId: string;
+  userName?: string;
+  notes?: string;
+}
+
+export interface ProjectInventoryStockDto {
+  id: string;
+  projectId: string;
+  materialId: string;
+  materialName?: string;
+  materialCode?: string;
+  unit?: string;
+  location: string;
+  quantityOnHand: number;
+  minimumStockLevel: number;
+  averageUnitCost: number;
+  totalStockValue: number;
+  isLowStock: boolean;
+  lastActivityAt: string;
+}
+
+export interface CreateInventoryTransactionRequest {
+  projectId: string;
+  materialId: string;
+  transactionType: InventoryTransactionType;
+  quantity: number;
+  unit: string;
+  unitCost?: number;
+  location?: string;
+  referenceNumber?: string;
+  costCodeId?: string;
+  wbsId?: string;
+  notes?: string;
+}
+
+// 7. Physical Progress
+export interface PhysicalProgressRecordDto {
+  id: string;
+  projectId: string;
+  projectName?: string;
+  wbsId?: string;
+  wbsName?: string;
+  scheduleActivityId?: string;
+  activityName: string;
+  plannedQuantity: number;
+  completedQuantity: number;
+  remainingQuantity: number;
+  unit: string;
+  progressPercentage: number;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  logDate: string;
+  loggedById: string;
+  loggedByName?: string;
+  dailyLogId?: string;
+  notes?: string;
+}
+
+export interface CreatePhysicalProgressRequest {
+  projectId: string;
+  wbsId?: string;
+  scheduleActivityId?: string;
+  activityName: string;
+  plannedQuantity: number;
+  completedQuantity: number;
+  unit?: string;
+  plannedStartDate?: string;
+  plannedEndDate?: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  dailyLogId?: string;
+  notes?: string;
+}
+
+export interface UpdatePhysicalProgressRequest {
+  completedQuantity?: number;
+  plannedQuantity?: number;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  notes?: string;
+}
+
+export interface ProjectProgressSummaryDto {
+  projectId: string;
+  projectName: string;
+  overallPhysicalProgress: number;
+  overallFinancialProgress: number;
+  totalActivities: number;
+  completedActivities: number;
+  inProgressActivities: number;
+  delayedActivities: number;
+  records: PhysicalProgressRecordDto[];
+}
+
+// 8. Scheduling & Gantt
+export enum ActivityDependencyType {
+  FinishToStart = 1,
+  StartToStart = 2,
+  FinishToFinish = 3,
+  StartToFinish = 4,
+}
+
+export interface ScheduleActivityDto {
+  id: string;
+  projectId: string;
+  wbsId?: string;
+  wbsName?: string;
+  costCodeId?: string;
+  costCodeName?: string;
+  activityCode: string;
+  activityName: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  actualStartDate?: string;
+  actualEndDate?: string;
+  durationDays: number;
+  responsiblePersonId?: string;
+  responsiblePersonName?: string;
+  status: TaskStatus;
+  statusName: string;
+  progressPercentage: number;
+  plannedQuantity: number;
+  completedQuantity: number;
+  unit: string;
+  isMilestone: boolean;
+  isCriticalPath: boolean;
+  isOverdue: boolean;
+  isDelayed: boolean;
+  predecessors: ScheduleDependencyDto[];
+}
+
+export interface ScheduleDependencyDto {
+  id: string;
+  predecessorActivityId: string;
+  predecessorActivityName?: string;
+  predecessorActivityCode?: string;
+  successorActivityId: string;
+  dependencyType: ActivityDependencyType;
+  dependencyTypeName: string;
+  lagDays: number;
+}
+
+export interface CreateScheduleActivityRequest {
+  projectId: string;
+  wbsId?: string;
+  costCodeId?: string;
+  activityCode: string;
+  activityName: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  responsiblePersonId?: string;
+  plannedQuantity?: number;
+  unit?: string;
+  isMilestone?: boolean;
+  predecessorIds?: string[];
+}
+
+export interface UpdateScheduleActivityRequest {
+  activityName?: string;
+  description?: string;
+  wbsId?: string;
+  costCodeId?: string;
+  startDate?: string;
+  endDate?: string;
+  responsiblePersonId?: string;
+  status?: TaskStatus;
+  progressPercentage?: number;
+  plannedQuantity?: number;
+  completedQuantity?: number;
+  unit?: string;
+  isMilestone?: boolean;
+}
+
+export interface ProjectGanttChartDto {
+  projectId: string;
+  projectName: string;
+  totalActivities: number;
+  overdueActivitiesCount: number;
+  delayedActivitiesCount: number;
+  upcomingActivitiesCount: number;
+  activities: ScheduleActivityDto[];
+}
+
+// 9. Project Billing
+export enum BillingApplicationStatus {
+  Draft = 1,
+  Submitted = 2,
+  UnderReview = 3,
+  Approved = 4,
+  Invoiced = 5,
+  PartiallyPaid = 6,
+  Paid = 7,
+  Rejected = 8,
+}
+
+export const BillingApplicationStatusLabels: Record<BillingApplicationStatus, string> = {
+  [BillingApplicationStatus.Draft]: 'Draft',
+  [BillingApplicationStatus.Submitted]: 'Submitted',
+  [BillingApplicationStatus.UnderReview]: 'Under Review',
+  [BillingApplicationStatus.Approved]: 'Approved',
+  [BillingApplicationStatus.Invoiced]: 'Invoiced',
+  [BillingApplicationStatus.PartiallyPaid]: 'Partially Paid',
+  [BillingApplicationStatus.Paid]: 'Paid',
+  [BillingApplicationStatus.Rejected]: 'Rejected',
+};
+
+export interface ProjectBillingApplicationDto {
+  id: string;
+  applicationNumber: string;
+  projectId: string;
+  projectName?: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  contractValue: number;
+  approvedChangeOrdersAmount: number;
+  revisedContractValue: number;
+  completedWorkAmount: number;
+  previousBillingAmount: number;
+  currentBillingAmount: number;
+  retentionPercentage: number;
+  retentionAmount: number;
+  netBillingAmount: number;
+  taxRate: number;
+  taxAmount: number;
+  totalInvoiceAmount: number;
+  amountPaid: number;
+  outstandingAmount: number;
+  status: BillingApplicationStatus;
+  statusName: string;
+  invoiceNumber?: string;
+  invoiceDate?: string;
+  paymentDueDate?: string;
+  notes?: string;
+  items: ProjectBillingItemDto[];
+  payments: ProjectPaymentRecordDto[];
+  createdAt: string;
+}
+
+export interface ProjectBillingItemDto {
+  id: string;
+  projectBillingApplicationId: string;
+  wbsId?: string;
+  wbsName?: string;
+  costCodeId?: string;
+  costCodeName?: string;
+  description: string;
+  scheduledValue: number;
+  previousCompletedAmount: number;
+  currentCompletedAmount: number;
+  totalCompletedAmount: number;
+  progressPercentage: number;
+}
+
+export interface ProjectPaymentRecordDto {
+  id: string;
+  projectBillingApplicationId: string;
+  projectId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  referenceNumber: string;
+  notes?: string;
+}
+
+export interface CreateBillingApplicationRequest {
+  projectId: string;
+  billingPeriodStart: string;
+  billingPeriodEnd: string;
+  currentBillingAmount: number;
+  retentionPercentage?: number;
+  taxRate?: number;
+  notes?: string;
+  items?: {
+    wbsId?: string;
+    costCodeId?: string;
+    description: string;
+    scheduledValue: number;
+    currentCompletedAmount: number;
+  }[];
+}
+
+// 10. Safety
+export enum SafetyIncidentSeverity {
+  NearMiss = 1,
+  Minor = 2,
+  Moderate = 3,
+  Severe = 4,
+  Critical = 5,
+  Fatal = 6,
+}
+
+export enum SafetyIncidentStatus {
+  Reported = 1,
+  Investigating = 2,
+  ActionRequired = 3,
+  Resolved = 4,
+  Closed = 5,
+}
+
+export interface SafetyIncidentDto {
+  id: string;
+  incidentNumber: string;
+  projectId: string;
+  projectName?: string;
+  incidentDateTime: string;
+  location: string;
+  personInvolved: string;
+  incidentType: string;
+  severity: SafetyIncidentSeverity;
+  severityName: string;
+  description: string;
+  immediateAction: string;
+  correctiveAction: string;
+  photosOrDocumentsJson?: string;
+  status: SafetyIncidentStatus;
+  statusName: string;
+  reportedById: string;
+  reportedByName?: string;
+  createdAt: string;
+}
+
+export interface SafetyInspectionDto {
+  id: string;
+  inspectionNumber: string;
+  projectId: string;
+  projectName?: string;
+  inspectorId: string;
+  inspectorName?: string;
+  inspectionDate: string;
+  checklistTitle: string;
+  overallResult: QualityInspectionResult;
+  overallResultName: string;
+  summaryFindings?: string;
+  hasIssues: boolean;
+  attachmentsJson?: string;
+  items: {
+    id: string;
+    safetyInspectionId: string;
+    requirement: string;
+    result: QualityInspectionResult;
+    findings?: string;
+    correctiveAction?: string;
+    isClosed: boolean;
+  }[];
+  createdAt: string;
+}
+
+export interface ToolboxTalkDto {
+  id: string;
+  projectId: string;
+  projectName?: string;
+  topic: string;
+  date: string;
+  conductedById: string;
+  conductedByName?: string;
+  participantsJson: string;
+  attendanceCount: number;
+  notes?: string;
+  isSignedOff: boolean;
+  createdAt: string;
+}
+
+// 11. Quality
+export enum QualityInspectionResult {
+  Passed = 1,
+  Failed = 2,
+  PassedWithComments = 3,
+}
+
+export enum QualityIssueStatus {
+  Open = 1,
+  InProgress = 2,
+  PendingReinspection = 3,
+  Closed = 4,
+}
+
+export interface QualityInspectionDto {
+  id: string;
+  inspectionNumber: string;
+  projectId: string;
+  projectName?: string;
+  wbsId?: string;
+  wbsName?: string;
+  scheduleActivityId?: string;
+  activityName?: string;
+  inspectorId: string;
+  inspectorName?: string;
+  inspectionDate: string;
+  discipline: string;
+  title: string;
+  result: QualityInspectionResult;
+  resultName: string;
+  comments?: string;
+  attachmentsJson?: string;
+  items: {
+    id: string;
+    qualityInspectionId: string;
+    requirement: string;
+    result: QualityInspectionResult;
+    notes?: string;
+  }[];
+  issues: QualityIssueDto[];
+  createdAt: string;
+}
+
+export interface QualityIssueDto {
+  id: string;
+  issueNumber: string;
+  qualityInspectionId: string;
+  projectId: string;
+  projectName?: string;
+  wbsId?: string;
+  wbsName?: string;
+  description: string;
+  rootCause: string;
+  correctiveAction: string;
+  targetResolutionDate?: string;
+  reinspectionDate?: string;
+  reinspectionResult?: QualityInspectionResult;
+  status: QualityIssueStatus;
+  statusName: string;
+  resolutionNotes?: string;
+  createdAt: string;
+}
+
+// 12. Subcontracts
+export enum SubcontractStatus {
+  Draft = 1,
+  Active = 2,
+  UnderReview = 3,
+  Completed = 4,
+  Terminated = 5,
+}
+
+export interface SubcontractDto {
+  id: string;
+  subcontractNumber: string;
+  vendorId: string;
+  vendorName?: string;
+  projectId: string;
+  projectName?: string;
+  wbsId?: string;
+  wbsName?: string;
+  costCodeId?: string;
+  costCodeName?: string;
+  scopeOfWork: string;
+  originalContractValue: number;
+  approvedChangeOrdersAmount: number;
+  revisedContractValue: number;
+  workCompletedAmount: number;
+  amountBilled: number;
+  amountPaid: number;
+  retentionPercentage: number;
+  retentionAmount: number;
+  remainingBalance: number;
+  startDate: string;
+  endDate: string;
+  paymentTerms: string;
+  status: SubcontractStatus;
+  statusName: string;
+  notes?: string;
+  payments: SubcontractPaymentDto[];
+  changeOrders: SubcontractChangeOrderDto[];
+  createdAt: string;
+}
+
+export interface SubcontractPaymentDto {
+  id: string;
+  subcontractId: string;
+  paymentNumber: string;
+  paymentDate: string;
+  grossAmount: number;
+  retentionDeducted: number;
+  netAmountPaid: number;
+  referenceNumber: string;
+  notes?: string;
+}
+
+export interface SubcontractChangeOrderDto {
+  id: string;
+  subcontractId: string;
+  changeOrderNumber: string;
+  title: string;
+  description?: string;
+  amount: number;
+  scheduleImpactDays: number;
+  status: ChangeOrderStatus;
+  statusName: string;
+  approvedDate?: string;
+}
+
+export interface CreateSubcontractRequest {
+  vendorId: string;
+  projectId: string;
+  wbsId?: string;
+  costCodeId?: string;
+  scopeOfWork: string;
+  originalContractValue: number;
+  retentionPercentage?: number;
+  startDate: string;
+  endDate: string;
+  paymentTerms?: string;
+  notes?: string;
+}
+
+export interface CreateSubcontractPaymentRequest {
+  grossAmount: number;
+  retentionDeducted?: number;
+  referenceNumber: string;
+  notes?: string;
+}
+
+export interface CreateSubcontractChangeOrderRequest {
+  title: string;
+  description?: string;
+  amount: number;
+  scheduleImpactDays?: number;
+}
+
+// 13. Universal Approvals
+export enum ApprovalEntityType {
+  Expense = 1,
+  MaterialRequest = 2,
+  PurchaseOrder = 3,
+  Timesheet = 4,
+  DailyLog = 5,
+  ChangeOrder = 6,
+  Subcontract = 7,
+  ProjectBilling = 8,
+  ProcurementRequest = 9,
+  SafetyIncident = 10,
+  QualityInspection = 11,
+}
+
+export enum ApprovalStatus {
+  Draft = 1,
+  Submitted = 2,
+  PendingApproval = 3,
+  Approved = 4,
+  Rejected = 5,
+  Cancelled = 6,
+}
+
+export interface ApprovalRequestDto {
+  id: string;
+  entityType: ApprovalEntityType;
+  entityTypeName: string;
+  entityId: string;
+  entityReferenceNumber: string;
+  projectId: string;
+  projectName?: string;
+  requestedById: string;
+  requestedByName?: string;
+  currentApproverId?: string;
+  currentApproverName?: string;
+  status: ApprovalStatus;
+  statusName: string;
+  submissionDate?: string;
+  decisionDate?: string;
+  notes?: string;
+  rejectionReason?: string;
+  history: {
+    id: string;
+    approvalRequestId: string;
+    action: string;
+    actorId: string;
+    actorName?: string;
+    actionDate: string;
+    resultingStatus: ApprovalStatus;
+    comments?: string;
+  }[];
+  createdAt: string;
+}
+
+export interface SubmitForApprovalRequest {
+  entityType: ApprovalEntityType;
+  entityId: string;
+  entityReferenceNumber: string;
+  projectId: string;
+  approverId?: string;
+  notes?: string;
+}
+
+export interface ApproveDecisionRequest {
+  comments?: string;
+}
+
+export interface RejectDecisionRequest {
+  rejectionReason: string;
+}
+
+// 14. Construction KPI Dashboard
+export interface ConstructionKpiDashboardDto {
+  projectId: string;
+  projectName: string;
+  projectCode: string;
+  status: string;
+  financials: {
+    contractValue: number;
+    originalBudget: number;
+    approvedChangeOrders: number;
+    revisedBudget: number;
+    committedCost: number;
+    actualCost: number;
+    remainingBudget: number;
+    forecastCost: number;
+    budgetVariance: number;
+    totalBilledToClient: number;
+    totalPaidByClient: number;
+    clientOutstandingBalance: number;
+  };
+  progress: {
+    physicalProgressPercentage: number;
+    financialProgressPercentage: number;
+    totalActivities: number;
+    completedActivities: number;
+    inProgressActivities: number;
+    delayedActivities: number;
+    overdueActivities: number;
+    scheduleDelayDays: number;
+    scheduleStatus: string;
+  };
+  fieldOperations: {
+    workersOnSiteToday: number;
+    totalLaborHoursLogged: number;
+    equipmentInUseCount: number;
+    pendingMaterialRequestsCount: number;
+    totalDailyLogsLogged: number;
+  };
+  risksAndIssues: {
+    openRFIs: number;
+    overdueRFIs: number;
+    pendingChangeOrders: number;
+    totalSafetyIncidents: number;
+    openSafetyIssues: number;
+    openQualityDeficiencies: number;
+  };
+  equipmentSummary: {
+    totalEquipmentAssigned: number;
+    inOperation: number;
+    maintenanceDue: number;
+    underMaintenance: number;
+    totalMaintenanceCost: number;
+  };
+}
+
+// 15. Equipment Maintenance
+export enum EquipmentMaintenanceType {
+  Preventive = 1,
+  Corrective = 2,
+  Inspection = 3,
+  Overhaul = 4,
+}
+
+export enum EquipmentMaintenanceStatus {
+  Scheduled = 1,
+  Due = 2,
+  InProgress = 3,
+  Completed = 4,
+  Overdue = 5,
+  Cancelled = 6,
+}
+
+export interface EquipmentMaintenanceRecordDto {
+  id: string;
+  equipmentId: string;
+  equipmentName?: string;
+  equipmentCode?: string;
+  projectId?: string;
+  projectName?: string;
+  maintenanceType: EquipmentMaintenanceType;
+  maintenanceTypeName: string;
+  serviceDate: string;
+  meterReadingHours: number;
+  maintenanceCost: number;
+  vendorId?: string;
+  vendorName?: string;
+  description: string;
+  partsUsed?: string;
+  nextServiceDate?: string;
+  nextServiceMeterHours?: number;
+  status: EquipmentMaintenanceStatus;
+  statusName: string;
+  notes?: string;
+  isOverdue: boolean;
+  createdAt: string;
+}
+
+export interface EquipmentMaintenanceSummaryDto {
+  totalMaintenanceRecords: number;
+  scheduledCount: number;
+  dueCount: number;
+  underMaintenanceCount: number;
+  overdueCount: number;
+  totalMaintenanceCost: number;
+  records: EquipmentMaintenanceRecordDto[];
+}
+
+export interface CreateEquipmentMaintenanceRequest {
+  equipmentId: string;
+  projectId?: string;
+  maintenanceType: EquipmentMaintenanceType;
+  serviceDate: string;
+  meterReadingHours: number;
+  maintenanceCost: number;
+  vendorId?: string;
+  description: string;
+  partsUsed?: string;
+  nextServiceDate?: string;
+  nextServiceMeterHours?: number;
+  status: EquipmentMaintenanceStatus;
+  notes?: string;
+}
+
+export interface UpdateEquipmentMaintenanceRequest {
+  maintenanceType?: EquipmentMaintenanceType;
+  serviceDate?: string;
+  meterReadingHours?: number;
+  maintenanceCost?: number;
+  vendorId?: string;
+  description?: string;
+  partsUsed?: string;
+  nextServiceDate?: string;
+  nextServiceMeterHours?: number;
+  status?: EquipmentMaintenanceStatus;
+  notes?: string;
+}
+
+

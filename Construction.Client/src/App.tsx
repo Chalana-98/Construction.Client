@@ -21,7 +21,22 @@ import VendorsPage from './features/vendors/VendorsPage';
 import TimesheetsPage from './features/timesheets/TimesheetsPage';
 import ProfilePage from './features/profile/ProfilePage';
 
-
+// Enterprise Construction ERP Modules
+import CostControlPage from './features/cost-control/CostControlPage';
+import WbsPage from './features/wbs/WbsPage';
+import ProcurementPage from './features/procurement/ProcurementPage';
+import PurchaseOrdersPage from './features/purchase-orders/PurchaseOrdersPage';
+import MaterialRequestsPage from './features/material-requests/MaterialRequestsPage';
+import InventoryLedgerPage from './features/inventory-ledger/InventoryLedgerPage';
+import PhysicalProgressPage from './features/physical-progress/PhysicalProgressPage';
+import ScheduleGanttPage from './features/schedule/ScheduleGanttPage';
+import ProjectBillingPage from './features/billing/ProjectBillingPage';
+import SafetyPage from './features/safety/SafetyPage';
+import QualityPage from './features/quality/QualityPage';
+import SubcontractsPage from './features/subcontracts/SubcontractsPage';
+import ApprovalsPage from './features/approvals/ApprovalsPage';
+import KpiDashboardPage from './features/kpi-dashboard/KpiDashboardPage';
+import EquipmentMaintenancePage from './features/equipment-maintenance/EquipmentMaintenancePage';
 
 export default function App() {
   return (
@@ -38,8 +53,23 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage />} />
+          <Route path="kpi-dashboard" element={<KpiDashboardPage />} />
+          <Route path="approvals" element={<ApprovalsPage />} />
           <Route path="projects" element={<ProjectsPage />} />
           <Route path="projects/:id" element={<ProjectDetailPage />} />
+          <Route path="wbs" element={<WbsPage />} />
+          <Route path="cost-control" element={<CostControlPage />} />
+          <Route path="schedule" element={<ScheduleGanttPage />} />
+          <Route path="physical-progress" element={<PhysicalProgressPage />} />
+          <Route path="procurement" element={<ProcurementPage />} />
+          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+          <Route path="material-requests" element={<MaterialRequestsPage />} />
+          <Route path="inventory-ledger" element={<InventoryLedgerPage />} />
+          <Route path="billing" element={<ProjectBillingPage />} />
+          <Route path="subcontracts" element={<SubcontractsPage />} />
+          <Route path="safety" element={<SafetyPage />} />
+          <Route path="quality" element={<QualityPage />} />
+          <Route path="equipment-maintenance" element={<EquipmentMaintenancePage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="expenses" element={<ExpensesPage />} />
           <Route path="daily-logs" element={<DailyLogsPage />} />
@@ -60,3 +90,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+
