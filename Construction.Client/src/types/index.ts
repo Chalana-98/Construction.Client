@@ -322,6 +322,7 @@ export interface ProjectListDto {
   startDate?: string;
   endDate?: string;
   budget: number;
+  currency?: string;
   completionPercentage: number;
   coverImageUrl?: string;
   projectManagerName?: string;
@@ -2437,5 +2438,45 @@ export interface UpdateEquipmentMaintenanceRequest {
   status?: EquipmentMaintenanceStatus;
   notes?: string;
 }
+
+// ============================================
+// Tenant & Localization Settings
+// ============================================
+
+export interface TenantSettingsDto {
+  tenantId: string;
+  companyName: string;
+  subdomain: string;
+  contactEmail: string;
+  contactPhone?: string;
+  address?: string;
+  currency: string;
+  currencySymbol: string;
+  timezone: string;
+  dateFormat: string;
+  taxRegistrationNumber?: string;
+  defaultVatRate: number;
+  defaultRetentionRate: number;
+  defaultDailyWorkingHours: number;
+  autoApprovalLimit: number;
+  subscriptionPlan: string;
+  createdAt: string;
+}
+
+export interface UpdateTenantSettingsRequest {
+  companyName: string;
+  contactPhone?: string;
+  address?: string;
+  currency: string;
+  currencySymbol: string;
+  timezone: string;
+  dateFormat: string;
+  taxRegistrationNumber?: string;
+  defaultVatRate: number;
+  defaultRetentionRate: number;
+  defaultDailyWorkingHours: number;
+  autoApprovalLimit: number;
+}
+
 
 

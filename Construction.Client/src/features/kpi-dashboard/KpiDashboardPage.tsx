@@ -20,8 +20,10 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import SpeedIcon from '@mui/icons-material/Speed';
 import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetProjectKpiDashboardQuery } from './api';
+import { useCurrency } from '@/utils/currency';
 
 export default function KpiDashboardPage() {
+  const { symbol } = useCurrency();
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -76,7 +78,7 @@ export default function KpiDashboardPage() {
               <Card sx={{ bgcolor: 'grey.50' }}>
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>CONTRACT VALUE</Typography>
-                  <Typography variant="h6" fontWeight={700}>${kpi.financials.contractValue.toLocaleString()}</Typography>
+                  <Typography variant="h6" fontWeight={700}>{symbol} {kpi.financials.contractValue.toLocaleString()}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -84,7 +86,7 @@ export default function KpiDashboardPage() {
               <Card sx={{ bgcolor: 'primary.50' }}>
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>REVISED BUDGET</Typography>
-                  <Typography variant="h6" fontWeight={700} color="primary.main">${kpi.financials.revisedBudget.toLocaleString()}</Typography>
+                  <Typography variant="h6" fontWeight={700} color="primary.main">{symbol} {kpi.financials.revisedBudget.toLocaleString()}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -92,7 +94,7 @@ export default function KpiDashboardPage() {
               <Card sx={{ bgcolor: 'warning.50' }}>
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>COMMITTED (POs & SCs)</Typography>
-                  <Typography variant="h6" fontWeight={700} color="warning.dark">${kpi.financials.committedCost.toLocaleString()}</Typography>
+                  <Typography variant="h6" fontWeight={700} color="warning.dark">{symbol} {kpi.financials.committedCost.toLocaleString()}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -100,7 +102,7 @@ export default function KpiDashboardPage() {
               <Card sx={{ bgcolor: 'error.50' }}>
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>ACTUAL EXPENDITURE</Typography>
-                  <Typography variant="h6" fontWeight={700} color="error.main">${kpi.financials.actualCost.toLocaleString()}</Typography>
+                  <Typography variant="h6" fontWeight={700} color="error.main">{symbol} {kpi.financials.actualCost.toLocaleString()}</Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -109,7 +111,7 @@ export default function KpiDashboardPage() {
                 <CardContent sx={{ p: 2 }}>
                   <Typography variant="caption" color="text.secondary" fontWeight={600}>BUDGET VARIANCE</Typography>
                   <Typography variant="h6" fontWeight={700} color={kpi.financials.budgetVariance >= 0 ? 'success.dark' : 'error.dark'}>
-                    ${kpi.financials.budgetVariance.toLocaleString()}
+                    {symbol} {kpi.financials.budgetVariance.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>

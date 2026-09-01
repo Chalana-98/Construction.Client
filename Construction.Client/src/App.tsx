@@ -20,6 +20,7 @@ import ChangeOrdersPage from './features/change-orders/ChangeOrdersPage';
 import VendorsPage from './features/vendors/VendorsPage';
 import TimesheetsPage from './features/timesheets/TimesheetsPage';
 import ProfilePage from './features/profile/ProfilePage';
+import SettingsPage from './features/settings/SettingsPage';
 
 // Enterprise Construction ERP Modules
 import CostControlPage from './features/cost-control/CostControlPage';
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="vendors" element={<VendorsPage />} />
           <Route path="timesheets" element={<TimesheetsPage />} />
           <Route path="profile" element={<ProfilePage />} />
+          <Route path="settings" element={<SettingsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

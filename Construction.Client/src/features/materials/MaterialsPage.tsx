@@ -21,6 +21,7 @@ import PageHeader from '@/components/PageHeader';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
 import { useSnackbar } from 'notistack';
+import { useCurrency } from '@/utils/currency';
 
 const emptyForm = { name: '', materialCode: '', category: '', unit: '', unitPrice: 0, quantityInStock: 0, supplierName: '', storageLocation: '', notes: '' };
 
@@ -45,6 +46,7 @@ const materialValidationSchema = Yup.object({
 });
 
 export default function MaterialsPage() {
+  const { symbol } = useCurrency();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const { data, isLoading, error, refetch } = useGetMaterialsQuery({ page, pageSize: 15, search: search || undefined });
@@ -220,7 +222,7 @@ export default function MaterialsPage() {
                     <TableCell sx={{ fontWeight: 600 }}>{m.name}</TableCell>
                     <TableCell>{m.materialCode}</TableCell>
                     <TableCell>{m.category}</TableCell>
-                    <TableCell align="right">${m.unitPrice.toFixed(2)}/{m.unit}</TableCell>
+                    <TableCell align="right">{symbol} {m.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} / {m.unit}</TableCell>
                     <TableCell align="right">{m.quantityInStock} {m.unit}</TableCell>
                     <TableCell>{m.supplierName ?? '—'}</TableCell>
                     <TableCell align="right">
@@ -318,7 +320,7 @@ export default function MaterialsPage() {
                 fullWidth
                 id="unitPrice"
                 name="unitPrice"
-                label="Unit Price"
+                label={`Unit Price (${symbol})`}
                 value={formik.values.unitPrice}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}

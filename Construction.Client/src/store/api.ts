@@ -71,6 +71,7 @@ export const api = createApi({
     'Approvals',
     'KpiDashboard',
     'EquipmentMaintenance',
+    'Settings',
   ],
   endpoints: () => ({}),
 });

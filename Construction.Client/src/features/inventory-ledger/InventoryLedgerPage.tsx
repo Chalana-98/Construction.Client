@@ -42,8 +42,10 @@ import {
   InventoryTransactionType,
   InventoryTransactionTypeLabels,
 } from '@/types';
+import { useCurrency } from '@/utils/currency';
 
 export default function InventoryLedgerPage() {
+  const { symbol } = useCurrency();
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -232,9 +234,9 @@ export default function InventoryLedgerPage() {
                         <TableCell align="right" sx={{ fontWeight: 700 }}>
                           {s.quantityOnHand.toLocaleString()} {s.unit}
                         </TableCell>
-                        <TableCell align="right">${s.averageUnitCost.toFixed(2)}</TableCell>
+                        <TableCell align="right">{symbol} {s.averageUnitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                          ${s.totalStockValue.toLocaleString()}
+                          {symbol} {s.totalStockValue.toLocaleString()}
                         </TableCell>
                         <TableCell>
                           {s.isLowStock ? (
@@ -311,7 +313,7 @@ export default function InventoryLedgerPage() {
                           {tx.quantity > 0 ? `+${tx.quantity}` : tx.quantity} {tx.unit}
                         </TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700 }}>
-                          ${tx.totalCost.toLocaleString()}
+                          {symbol} {tx.totalCost.toLocaleString()}
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2">{tx.referenceNumber || '—'}</Typography>
@@ -381,7 +383,7 @@ export default function InventoryLedgerPage() {
               sx={{ width: 120 }}
             />
             <TextField
-              label="Unit Cost ($)"
+              label={`Unit Cost (${symbol})`}
               type="number"
               value={unitCost}
               onChange={(e) => setUnitCost(e.target.value)}

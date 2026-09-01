@@ -47,8 +47,10 @@ import {
   BillingApplicationStatusLabels,
   type ProjectBillingApplicationDto,
 } from '@/types';
+import { useCurrency } from '@/utils/currency';
 
 export default function ProjectBillingPage() {
+  const { symbol } = useCurrency();
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -185,7 +187,7 @@ export default function ProjectBillingPage() {
                     TOTAL INVOICED TO CLIENT
                   </Typography>
                   <Typography variant="h5" fontWeight={700} color="primary.main">
-                    ${totalBilled.toLocaleString()}
+                    {symbol} {totalBilled.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -198,7 +200,7 @@ export default function ProjectBillingPage() {
                     TOTAL PAID BY CLIENT
                   </Typography>
                   <Typography variant="h5" fontWeight={700} color="success.dark">
-                    ${totalCollected.toLocaleString()}
+                    {symbol} {totalCollected.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -211,7 +213,7 @@ export default function ProjectBillingPage() {
                     OUTSTANDING BALANCE
                   </Typography>
                   <Typography variant="h5" fontWeight={700} color="error.main">
-                    ${totalOutstanding.toLocaleString()}
+                    {symbol} {totalOutstanding.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -224,7 +226,7 @@ export default function ProjectBillingPage() {
                     RETENTION WITHHELD
                   </Typography>
                   <Typography variant="h5" fontWeight={700} color="warning.dark">
-                    ${totalRetained.toLocaleString()}
+                    {symbol} {totalRetained.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -279,18 +281,18 @@ export default function ProjectBillingPage() {
                             }
                           />
                         </TableCell>
-                        <TableCell align="right">${app.currentBillingAmount.toLocaleString()}</TableCell>
+                        <TableCell align="right">{symbol} {app.currentBillingAmount.toLocaleString()}</TableCell>
                         <TableCell align="right" sx={{ color: 'warning.dark' }}>
-                          -${app.retentionAmount.toLocaleString()}
+                          -{symbol} {app.retentionAmount.toLocaleString()}
                         </TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700 }}>
-                          ${app.totalInvoiceAmount.toLocaleString()}
+                          {symbol} {app.totalInvoiceAmount.toLocaleString()}
                         </TableCell>
                         <TableCell align="right" sx={{ color: 'success.main', fontWeight: 600 }}>
-                          ${app.amountPaid.toLocaleString()}
+                          {symbol} {app.amountPaid.toLocaleString()}
                         </TableCell>
                         <TableCell align="right" sx={{ color: app.outstandingAmount > 0 ? 'error.main' : 'text.secondary', fontWeight: 700 }}>
-                          ${app.outstandingAmount.toLocaleString()}
+                          {symbol} {app.outstandingAmount.toLocaleString()}
                         </TableCell>
                         <TableCell align="right">
                           {app.status === BillingApplicationStatus.Draft && (

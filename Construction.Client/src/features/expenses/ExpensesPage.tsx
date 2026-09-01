@@ -28,13 +28,14 @@ import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { useSnackbar } from 'notistack';
+import { useCurrency } from '@/utils/currency';
 
 const emptyForm = {
   projectId: '',
   description: '',
   category: '' as ExpenseCategory | '',
   amount: '',
-  currency: 'USD',
+  currency: 'LKR',
   expenseDate: new Date().toISOString().split('T')[0],
   vendorName: '',
   invoiceNumber: '',
@@ -52,7 +53,7 @@ const expenseValidationSchema = Yup.object({
     .required('Expense category is required.'),
   amount: Yup.number()
     .typeError('Amount must be a valid number.')
-    .positive('Amount must be greater than $0.')
+    .positive('Amount must be greater than 0.')
     .required('Expense amount is required.'),
   expenseDate: Yup.string()
     .required('Expense date is required.'),
@@ -62,6 +63,7 @@ const expenseValidationSchema = Yup.object({
 });
 
 export default function ExpensesPage() {
+  const { symbol } = useCurrency();
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState<ExpenseCategory | ''>('');
 
@@ -279,7 +281,7 @@ export default function ExpensesPage() {
                     </TableCell>
                     <TableCell align="right">
                       <Typography fontWeight={600} color="primary.main">
-                        ${exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {(exp.currency === 'USD' ? '$' : (exp.currency === 'EUR' ? '€' : (exp.currency === 'GBP' ? '£' : (symbol || 'Rs.'))))} {exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </Typography>
                     </TableCell>
                     <TableCell>

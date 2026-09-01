@@ -36,8 +36,10 @@ import {
   useSeedStandardCostCodesMutation,
 } from './api';
 import { CostCodeCategory, CostCodeCategoryLabels } from '@/types';
+import { useCurrency } from '@/utils/currency';
 
 export default function CostControlPage() {
+  const { symbol } = useCurrency();
   const { data: projectsData, isLoading: projectsLoading } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -145,7 +147,7 @@ export default function CostControlPage() {
                     ORIGINAL BUDGET
                   </Typography>
                   <Typography variant="h6" fontWeight={700} color="primary.main">
-                    ${(summary?.totalOriginalBudget ?? 0).toLocaleString()}
+                    {symbol} {(summary?.totalOriginalBudget ?? 0).toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -158,7 +160,7 @@ export default function CostControlPage() {
                     COMMITTED (POs & SCs)
                   </Typography>
                   <Typography variant="h6" fontWeight={700} color="warning.dark">
-                    ${(summary?.totalCommittedCost ?? 0).toLocaleString()}
+                    {symbol} {(summary?.totalCommittedCost ?? 0).toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -171,7 +173,7 @@ export default function CostControlPage() {
                     ACTUAL SPENT
                   </Typography>
                   <Typography variant="h6" fontWeight={700} color="error.main">
-                    ${(summary?.totalActualCost ?? 0).toLocaleString()}
+                    {symbol} {(summary?.totalActualCost ?? 0).toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -184,7 +186,7 @@ export default function CostControlPage() {
                     REMAINING BUDGET
                   </Typography>
                   <Typography variant="h6" fontWeight={700} color="success.main">
-                    ${(summary?.totalRemainingBudget ?? 0).toLocaleString()}
+                    {symbol} {(summary?.totalRemainingBudget ?? 0).toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -201,7 +203,7 @@ export default function CostControlPage() {
                     fontWeight={700}
                     color={(summary?.totalVariance ?? 0) >= 0 ? 'success.dark' : 'error.dark'}
                   >
-                    ${(summary?.totalVariance ?? 0).toLocaleString()}
+                    {symbol} {(summary?.totalVariance ?? 0).toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -256,18 +258,18 @@ export default function CostControlPage() {
                               </Typography>
                             )}
                           </TableCell>
-                          <TableCell align="right">${cc.originalBudget.toLocaleString()}</TableCell>
+                          <TableCell align="right">{symbol} {cc.originalBudget.toLocaleString()}</TableCell>
                           <TableCell align="right" sx={{ color: 'warning.dark', fontWeight: 600 }}>
-                            ${cc.committedCost.toLocaleString()}
+                            {symbol} {cc.committedCost.toLocaleString()}
                           </TableCell>
                           <TableCell align="right" sx={{ color: 'error.main', fontWeight: 600 }}>
-                            ${cc.actualCost.toLocaleString()}
+                            {symbol} {cc.actualCost.toLocaleString()}
                           </TableCell>
                           <TableCell align="right" sx={{ color: cc.remainingBudget >= 0 ? 'success.main' : 'error.main', fontWeight: 600 }}>
-                            ${cc.remainingBudget.toLocaleString()}
+                            {symbol} {cc.remainingBudget.toLocaleString()}
                           </TableCell>
                           <TableCell align="right" sx={{ color: cc.budgetVariance >= 0 ? 'success.dark' : 'error.dark', fontWeight: 700 }}>
-                            ${cc.budgetVariance.toLocaleString()}
+                            {symbol} {cc.budgetVariance.toLocaleString()}
                           </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

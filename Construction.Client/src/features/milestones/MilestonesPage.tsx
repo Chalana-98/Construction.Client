@@ -24,6 +24,7 @@ import EmptyState from '@/components/EmptyState';
 import FlagIcon from '@mui/icons-material/Flag';
 import { useGetProjectsQuery } from '@/features/projects/api';
 import { useSnackbar } from 'notistack';
+import { useCurrency } from '@/utils/currency';
 
 const emptyForm = { name: '', description: '', dueDate: '', paymentAmount: 0, notes: '', projectId: '' };
 
@@ -42,6 +43,7 @@ const milestoneValidationSchema = Yup.object({
 });
 
 export default function MilestonesPage() {
+  const { symbol } = useCurrency();
   const [page, setPage] = useState(1);
   const { data, isLoading, error, refetch } = useGetMilestonesQuery({ page, pageSize: 12 });
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 100 });
@@ -202,7 +204,7 @@ export default function MilestonesPage() {
                     {m.paymentAmount != null && m.paymentAmount > 0 && (
                       <Box display="flex" alignItems="center" gap={0.5} mb={1}>
                         <Typography variant="body2" fontWeight={600} color="primary">
-                          ${m.paymentAmount.toLocaleString()}
+                          {symbol} {m.paymentAmount.toLocaleString()}
                         </Typography>
                         {m.paymentReceived && <Chip label="Received" size="small" color="success" />}
                       </Box>

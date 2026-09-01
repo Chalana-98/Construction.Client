@@ -41,8 +41,10 @@ import {
   EquipmentMaintenanceStatus,
   type EquipmentDto,
 } from '@/types';
+import { useCurrency } from '@/utils/currency';
 
 export default function EquipmentMaintenancePage() {
+  const { symbol } = useCurrency();
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -185,7 +187,7 @@ export default function EquipmentMaintenancePage() {
                 TOTAL MAINTENANCE COST
               </Typography>
               <Typography variant="h5" fontWeight={700} color="info.main">
-                ${(summary?.totalMaintenanceCost ?? 0).toLocaleString()}
+                {symbol} {(summary?.totalMaintenanceCost ?? 0).toLocaleString()}
               </Typography>
             </CardContent>
           </Card>
@@ -236,7 +238,7 @@ export default function EquipmentMaintenancePage() {
                       </TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>{r.meterReadingHours} hrs</TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>
-                        ${r.maintenanceCost.toLocaleString()}
+                        {symbol} {r.maintenanceCost.toLocaleString()}
                       </TableCell>
                       <TableCell sx={{ maxWidth: 200 }}>
                         <Typography variant="body2">{r.description}</Typography>

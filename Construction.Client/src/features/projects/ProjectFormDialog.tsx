@@ -16,7 +16,7 @@ interface Props {
 
 const initial = {
   name: '', description: '', projectCode: '', clientName: '', clientEmail: '', clientPhone: '',
-  siteAddress: '', city: '', state: '', postalCode: '', country: '', budget: 0, currency: 'USD',
+  siteAddress: '', city: '', state: '', postalCode: '', country: '', budget: 0, currency: 'LKR',
   notes: '',
 };
 
@@ -32,7 +32,7 @@ const projectValidationSchema = Yup.object({
     .required('Site address is required.'),
   budget: Yup.number()
     .typeError('Budget must be a number.')
-    .moreThan(0, 'Budget must be greater than $0.')
+    .moreThan(0, 'Budget must be greater than 0.')
     .required('Project budget is required.'),
   clientEmail: Yup.string()
     .email('Please enter a valid email address.')

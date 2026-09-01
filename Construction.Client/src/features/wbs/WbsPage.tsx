@@ -40,8 +40,10 @@ import {
   useDeleteWbsNodeMutation,
 } from './api';
 import { WbsStatus, WbsStatusLabels, type WbsNodeDto } from '@/types';
+import { useCurrency } from '@/utils/currency';
 
 export default function WbsPage() {
+  const { symbol } = useCurrency();
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -126,7 +128,7 @@ export default function WbsPage() {
           </TableCell>
           <TableCell>{node.costCodeName || '—'}</TableCell>
           <TableCell align="right" sx={{ fontWeight: 600 }}>
-            ${(node.budget || node.rolledUpBudget).toLocaleString()}
+            {symbol} {(node.budget || node.rolledUpBudget).toLocaleString()}
           </TableCell>
           <TableCell sx={{ minWidth: 180 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -300,7 +302,7 @@ export default function WbsPage() {
 
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
-              label="Allocated Budget ($)"
+              label={`Allocated Budget (${symbol})`}
               type="number"
               value={budget}
               onChange={(e) => setBudget(e.target.value)}

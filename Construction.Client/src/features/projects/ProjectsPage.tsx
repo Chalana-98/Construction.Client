@@ -24,10 +24,11 @@ import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import ProjectFormDialog from './ProjectFormDialog';
-
+import { useCurrency } from '@/utils/currency';
 
 export default function ProjectsPage() {
   const navigate = useNavigate();
+  const { symbol } = useCurrency();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<ProjectStatus | ''>('');
@@ -145,7 +146,7 @@ export default function ProjectsPage() {
 
                     <Box display="flex" justifyContent="space-between" alignItems="center" mt={2}>
                       <Typography variant="body2" fontWeight={600} color="primary">
-                        ${project.budget.toLocaleString()}
+                        {project.currency === 'USD' ? '$' : (project.currency === 'EUR' ? '€' : (project.currency === 'GBP' ? '£' : (symbol || 'Rs.')))} {project.budget.toLocaleString()}
                       </Typography>
                       <Typography variant="caption" color="text.secondary">
                         {project.startDate

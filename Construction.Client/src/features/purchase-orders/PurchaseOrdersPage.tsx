@@ -47,8 +47,10 @@ import {
   useDeletePurchaseOrderMutation,
 } from './api';
 import { PurchaseOrderStatus, PurchaseOrderStatusLabels, type PurchaseOrderDto } from '@/types';
+import { useCurrency } from '@/utils/currency';
 
 export default function PurchaseOrdersPage() {
+  const { symbol } = useCurrency();
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -271,7 +273,7 @@ export default function PurchaseOrdersPage() {
                         />
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>
-                        ${po.totalAmount.toLocaleString()}
+                        {symbol} {po.totalAmount.toLocaleString()}
                       </TableCell>
                       <TableCell>{new Date(po.requestedDate).toLocaleDateString()}</TableCell>
                       <TableCell align="right">
@@ -440,7 +442,7 @@ export default function PurchaseOrdersPage() {
                 size="small"
               />
               <TextField
-                label="Unit Price ($)"
+                label={`Unit Price (${symbol})`}
                 type="number"
                 value={item.unitPrice}
                 onChange={(e) => handleItemChange(idx, 'unitPrice', Number(e.target.value))}

@@ -44,8 +44,10 @@ import {
   useDeleteSubcontractMutation,
 } from './api';
 import { SubcontractStatus, type SubcontractDto } from '@/types';
+import { useCurrency } from '@/utils/currency';
 
 export default function SubcontractsPage() {
+  const { symbol } = useCurrency();
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -211,7 +213,7 @@ export default function SubcontractsPage() {
                     COMMITTED SUBCONTRACTS VALUE
                   </Typography>
                   <Typography variant="h5" fontWeight={700} color="primary.main">
-                    ${totalRevisedContract.toLocaleString()}
+                    {symbol} {totalRevisedContract.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -224,7 +226,7 @@ export default function SubcontractsPage() {
                     ACTUAL CERTIFIED PAID
                   </Typography>
                   <Typography variant="h5" fontWeight={700} color="success.dark">
-                    ${totalPaid.toLocaleString()}
+                    {symbol} {totalPaid.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -237,7 +239,7 @@ export default function SubcontractsPage() {
                     REMAINING BALANCE TO PAY
                   </Typography>
                   <Typography variant="h5" fontWeight={700} color="warning.dark">
-                    ${totalBalance.toLocaleString()}
+                    {symbol} {totalBalance.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -250,7 +252,7 @@ export default function SubcontractsPage() {
                     RETENTION WITHHELD
                   </Typography>
                   <Typography variant="h5" fontWeight={700} color="info.main">
-                    ${totalRetention.toLocaleString()}
+                    {symbol} {totalRetention.toLocaleString()}
                   </Typography>
                 </CardContent>
               </Card>
@@ -295,13 +297,13 @@ export default function SubcontractsPage() {
                           <Typography variant="caption" color="text.secondary">{sc.costCodeName || ''}</Typography>
                         </TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700 }}>
-                          ${sc.revisedContractValue.toLocaleString()}
+                          {symbol} {sc.revisedContractValue.toLocaleString()}
                         </TableCell>
                         <TableCell align="right" sx={{ color: 'success.main', fontWeight: 600 }}>
-                          ${sc.amountPaid.toLocaleString()}
+                          {symbol} {sc.amountPaid.toLocaleString()}
                         </TableCell>
                         <TableCell align="right" sx={{ fontWeight: 700, color: 'warning.dark' }}>
-                          ${sc.remainingBalance.toLocaleString()}
+                          {symbol} {sc.remainingBalance.toLocaleString()}
                         </TableCell>
                         <TableCell>
                           <Chip

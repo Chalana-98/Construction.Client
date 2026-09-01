@@ -42,8 +42,10 @@ import {
   useDeleteProcurementRequestMutation,
 } from './api';
 import { ProcurementStatus, ProcurementStatusLabels } from '@/types';
+import { useCurrency } from '@/utils/currency';
 
 export default function ProcurementPage() {
+  const { symbol } = useCurrency();
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
   const projects = projectsData?.items ?? [];
 
@@ -215,7 +217,7 @@ export default function ProcurementPage() {
                         />
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 700 }}>
-                        ${r.estimatedTotalCost.toLocaleString()}
+                        {symbol} {r.estimatedTotalCost.toLocaleString()}
                       </TableCell>
                       <TableCell>{new Date(r.requiredDate).toLocaleDateString()}</TableCell>
                       <TableCell align="right">
@@ -341,7 +343,7 @@ export default function ProcurementPage() {
                 size="small"
               />
               <TextField
-                label="Est. Unit Price ($)"
+                label={`Est. Unit Price (${symbol})`}
                 type="number"
                 value={item.estimatedUnitPrice}
                 onChange={(e) => handleItemChange(idx, 'estimatedUnitPrice', Number(e.target.value))}

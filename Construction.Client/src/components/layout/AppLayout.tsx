@@ -16,6 +16,7 @@ import {
   Menu,
   MenuItem,
   Divider,
+  Chip,
   useMediaQuery,
   useTheme,
 } from '@mui/material';
@@ -52,6 +53,8 @@ import HandshakeIcon from '@mui/icons-material/Handshake';
 import HowToRegIcon from '@mui/icons-material/HowToReg';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import BuildCircleIcon from '@mui/icons-material/BuildCircle';
+import SettingsIcon from '@mui/icons-material/Settings';
+import CurrencyExchangeIcon from '@mui/icons-material/CurrencyExchange';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { logout } from '@/store/authSlice';
 
@@ -87,6 +90,7 @@ const navItems = [
   { path: '/vendors', label: 'Vendors', icon: <StoreIcon /> },
   { path: '/timesheets', label: 'Timesheets', icon: <AccessTimeIcon /> },
   { path: '/team', label: 'Team', icon: <PeopleIcon /> },
+  { path: '/settings', label: 'Settings', icon: <SettingsIcon /> },
 ];
 
 export default function AppLayout() {
@@ -98,6 +102,7 @@ export default function AppLayout() {
   const location = useLocation();
   const dispatch = useAppDispatch();
   const user = useAppSelector((s) => s.auth.user);
+  const settings = useAppSelector((s) => s.settings);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -188,6 +193,15 @@ export default function AppLayout() {
             <MenuIcon />
           </IconButton>
           <Box flex={1} />
+          <Chip
+            icon={<CurrencyExchangeIcon fontSize="small" />}
+            label={`Currency: ${settings?.currencySymbol || 'Rs.'} (${settings?.currency || 'LKR'})`}
+            size="small"
+            color="primary"
+            variant="outlined"
+            onClick={() => navigate('/settings')}
+            sx={{ mr: 2, fontWeight: 600, cursor: 'pointer', display: { xs: 'none', sm: 'inline-flex' } }}
+          />
           <IconButton onClick={(e) => setAnchorEl(e.currentTarget)}>
             <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: 14 }}>
               {user?.name?.charAt(0).toUpperCase() ?? 'U'}
@@ -213,6 +227,10 @@ export default function AppLayout() {
             <MenuItem onClick={() => { setAnchorEl(null); navigate('/profile'); }}>
               <ListItemIcon><PersonIcon fontSize="small" /></ListItemIcon>
               Profile
+            </MenuItem>
+            <MenuItem onClick={() => { setAnchorEl(null); navigate('/settings'); }}>
+              <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon>
+              Settings
             </MenuItem>
             <MenuItem onClick={handleLogout}>
               <ListItemIcon><LogoutIcon fontSize="small" /></ListItemIcon>

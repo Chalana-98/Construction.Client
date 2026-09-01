@@ -23,6 +23,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
 import GroupIcon from '@mui/icons-material/Group';
 import { useSnackbar } from 'notistack';
+import { useCurrency } from '@/utils/currency';
 
 const ROLES = ['Viewer', 'Worker', 'Manager', 'Admin'];
 
@@ -50,6 +51,7 @@ const teamValidationSchema = Yup.object({
 });
 
 export default function TeamPage() {
+  const { symbol } = useCurrency();
   const [page, setPage] = useState(1);
   const [roleFilter, setRoleFilter] = useState('');
   const { data, isLoading, error, refetch } = useGetProjectMembersQuery({
@@ -198,7 +200,7 @@ export default function TeamPage() {
                     <TableCell>
                       <Chip label={m.isActive ? 'Active' : 'Inactive'} size="small" color={m.isActive ? 'success' : 'default'} />
                     </TableCell>
-                    <TableCell align="right">{m.dailyRate ? `$${m.dailyRate}/day` : '—'}</TableCell>
+                    <TableCell align="right">{m.dailyRate ? `${symbol} ${m.dailyRate.toLocaleString()} / day` : '—'}</TableCell>
                     <TableCell>{new Date(m.joinedDate).toLocaleDateString()}</TableCell>
                     <TableCell align="right">
                       {m.isActive ? (
@@ -295,7 +297,7 @@ export default function TeamPage() {
                 fullWidth
                 id="dailyRate"
                 name="dailyRate"
-                label="Daily Rate ($)"
+                label={`Daily Wage Rate (${symbol})`}
                 type="number"
                 value={formik.values.dailyRate}
                 onChange={formik.handleChange}

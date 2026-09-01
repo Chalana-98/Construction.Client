@@ -25,7 +25,8 @@ import PageHeader from '@/components/PageHeader';
 import EmptyState from '@/components/EmptyState';
 import ApartmentIcon from '@mui/icons-material/Apartment';
 import ReportProblemIcon from '@mui/icons-material/ReportProblem';
-import { useAppSelector } from '@/store/hooks';
+import { useAppSelector, type RootState } from '@/store';
+import { useCurrency } from '@/utils/currency';
 
 function StatCard({
   title,
@@ -34,34 +35,44 @@ function StatCard({
   color,
   subtitle,
 }: {
-  readonly title: string;
-  readonly value: string | number;
-  readonly icon: React.ReactNode;
-  readonly color: string;
-  readonly subtitle?: string;
+  title: string;
+  value: string | number;
+  icon: React.ReactNode;
+  color: string;
+  subtitle?: string;
 }) {
   return (
-    <Card>
+    <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 4,
+          bgcolor: color,
+        }}
+      />
       <CardContent sx={{ p: 3 }}>
         <Box display="flex" justifyContent="space-between" alignItems="flex-start">
           <Box>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
+            <Typography variant="body2" color="text.secondary" fontWeight={500} mb={0.5}>
               {title}
             </Typography>
-            <Typography variant="h4" fontWeight={700}>
+            <Typography variant="h4" fontWeight={700} color="text.primary">
               {value}
             </Typography>
             {subtitle && (
-              <Typography variant="caption" color="text.secondary">
+              <Typography variant="caption" color="text.secondary" mt={0.5} display="block">
                 {subtitle}
               </Typography>
             )}
           </Box>
           <Box
             sx={{
-              bgcolor: `${color}15`,
+              p: 1.5,
               borderRadius: 2,
-              p: 1,
+              bgcolor: `${color}15`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -78,7 +89,8 @@ function StatCard({
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { data, isLoading, error, refetch } = useGetDashboardQuery();
-  const user = useAppSelector((s) => s.auth.user);
+  const user = useAppSelector((s: RootState) => s.auth.user);
+  const { symbol } = useCurrency();
 
   if (isLoading) return <Loading />;
   if (error) return <ErrorDisplay onRetry={refetch} />;
@@ -128,7 +140,7 @@ export default function DashboardPage() {
             value={`${budgetUsed}%`}
             icon={<AttachMoneyIcon sx={{ color: '#9C27B0' }} />}
             color="#9C27B0"
-            subtitle={`$${(dashboard?.totalExpenses ?? 0).toLocaleString()} spent`}
+            subtitle={`${symbol} ${(dashboard?.totalExpenses ?? 0).toLocaleString()} spent`}
           />
         </Grid>
       </Grid>

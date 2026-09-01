@@ -25,6 +25,7 @@ import ConfirmDialog from '@/components/ConfirmDialog';
 import EmptyState from '@/components/EmptyState';
 import PriceChangeIcon from '@mui/icons-material/PriceChange';
 import { useSnackbar } from 'notistack';
+import { useCurrency } from '@/utils/currency';
 
 const emptyForm = { projectId: '', title: '', description: '', requestedAmount: 0, scheduleImpactDays: 0 };
 
@@ -45,6 +46,7 @@ const changeOrderValidationSchema = Yup.object({
 });
 
 export default function ChangeOrdersPage() {
+  const { symbol } = useCurrency();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<ChangeOrderStatus | ''>('');
   const { data, isLoading, error, refetch } = useGetChangeOrdersQuery({
@@ -185,7 +187,7 @@ export default function ChangeOrdersPage() {
                     <TableCell><Chip label={co.number} size="small" variant="outlined" /></TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{co.title}</TableCell>
                     <TableCell><Chip label={ChangeOrderStatusLabels[co.status] ?? co.status} size="small" /></TableCell>
-                    <TableCell align="right">${co.requestedAmount.toLocaleString()}</TableCell>
+                    <TableCell align="right">{symbol} {co.requestedAmount.toLocaleString()}</TableCell>
                     <TableCell align="right">{co.scheduleImpactDays > 0 ? `+${co.scheduleImpactDays}d` : 'None'}</TableCell>
                     <TableCell>{new Date(co.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell align="right">
@@ -282,7 +284,7 @@ export default function ChangeOrdersPage() {
                 id="requestedAmount"
                 name="requestedAmount"
                 type="number"
-                label="Requested Amount ($)"
+                label={`Requested Amount (${symbol})`}
                 value={formik.values.requestedAmount}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
