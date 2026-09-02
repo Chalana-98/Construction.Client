@@ -4,7 +4,7 @@ import { DEMO_MOCK_DATA } from './demoMockData';
 
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: '/api',
+  baseUrl: import.meta.env.VITE_API_URL || '/api',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token;
     const tenantId = (getState() as RootState).auth.user?.tenantId;
