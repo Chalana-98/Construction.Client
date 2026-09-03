@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -30,7 +33,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetFlatWbsByProjectQuery } from '@/features/wbs/api';
 import {
   useGetQualityInspectionsQuery,
@@ -45,11 +47,9 @@ import {
 } from '@/types';
 
 export default function QualityPage() {
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
+  const { enqueueSnackbar } = useSnackbar();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const [tab, setTab] = useState(0);
 
@@ -82,33 +82,41 @@ export default function QualityPage() {
   const [closeNotes, setCloseNotes] = useState('');
 
   const handleCreateInspection = async () => {
-    if (!activeProjectId || !title) return;
-    await createInspection({
-      projectId: activeProjectId,
-      wbsId: wbsId || undefined,
-      discipline,
-      title,
-      result,
-      comments,
-      items: [
-        {
-          requirement: `${discipline} visual and dimension verification`,
-          result,
-          notes: comments,
-        },
-      ],
-    }).unwrap();
+    try {
+      if (!activeProjectId || !title) return;
+      await createInspection({
+        projectId: activeProjectId,
+        wbsId: wbsId || undefined,
+        discipline,
+        title,
+        result,
+        comments,
+        items: [
+          {
+            requirement: `${discipline} visual and dimension verification`,
+            result,
+            notes: comments,
+          },
+        ],
+      }).unwrap();
 
-    setOpenModal(false);
-    setTitle('');
-    setComments('');
+      setOpenModal(false);
+      setTitle('');
+      setComments('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleConfirmCloseIssue = async () => {
-    if (!closeIssueId) return;
-    await closeIssue({ id: closeIssueId, notes: closeNotes || 'Verified and rectified.' }).unwrap();
-    setCloseIssueId(null);
-    setCloseNotes('');
+    try {
+      if (!closeIssueId) return;
+      await closeIssue({ id: closeIssueId, notes: closeNotes || 'Verified and rectified.' }).unwrap();
+      setCloseIssueId(null);
+      setCloseNotes('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   return (
@@ -129,7 +137,7 @@ export default function QualityPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>

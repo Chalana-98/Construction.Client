@@ -79,10 +79,10 @@ export default function SettingsPage() {
   const [selectedDateFormat, setSelectedDateFormat] = useState(settings?.dateFormat || 'DD/MM/YYYY');
 
   // Company Profile
-  const [companyName, setCompanyName] = useState(settings?.companyName || 'Ceylon BuildTech Engineering (Pvt) Ltd');
-  const [taxNumber, setTaxNumber] = useState(settings?.taxRegistrationNumber || 'PV-00284719 / VAT-11482934');
-  const [contactPhone, setContactPhone] = useState(settings?.contactPhone || '+94 11 288 9400');
-  const [address, setAddress] = useState(settings?.address || 'Level 14, Lotus Tower Commercial Complex, Colombo 02, Sri Lanka');
+  const [companyName, setCompanyName] = useState(settings?.companyName || '');
+  const [taxNumber, setTaxNumber] = useState(settings?.taxRegistrationNumber || '');
+  const [contactPhone, setContactPhone] = useState(settings?.contactPhone || '');
+  const [address, setAddress] = useState(settings?.address || '');
 
   // Financial Defaults
   const [vatRate, setVatRate] = useState(settings?.defaultVatRate || 18.0);
@@ -114,7 +114,10 @@ export default function SettingsPage() {
     }
   }, [apiSettings, dispatch]);
 
-  const isAdmin = user?.role?.toLowerCase() === 'admin' || !user?.role; // Default true for demo/admin
+  // Fail closed: a missing or unrecognised role must not be treated as an administrator.
+  // The server enforces this too (Policies.CanAdminister); this only shapes the UI.
+  const role = user?.role?.toLowerCase();
+  const isAdmin = role === 'admin' || role === 'superadmin';
 
   const handleSave = async () => {
     const symbol = selectedCurrency === 'USD' ? '$' : selectedCurrency === 'EUR' ? '€' : selectedCurrency === 'GBP' ? '£' : 'Rs.';
@@ -134,16 +137,21 @@ export default function SettingsPage() {
       autoApprovalLimit: Number(autoApprovalLimit),
     };
 
-    // Update Redux state immediately
-    dispatch(updateSettingsState(payload));
-    dispatch(setCurrency(selectedCurrency));
-
+    // Save to the server FIRST. Local state is only updated once the server has accepted the
+    // change — otherwise a failed save left this browser showing one currency while the server
+    // and every other user kept the old one.
     try {
       await updateSettingsApi(payload).unwrap();
-      enqueueSnackbar('Settings updated successfully! System currency updated.', { variant: 'success' });
-    } catch {
-      // If offline or in demo mode, Redux has already updated
-      enqueueSnackbar('Settings saved to workspace preferences!', { variant: 'success' });
+
+      dispatch(updateSettingsState(payload));
+      dispatch(setCurrency(selectedCurrency));
+
+      enqueueSnackbar('Settings saved.', { variant: 'success' });
+    } catch (err) {
+      const message =
+        (err as { data?: { message?: string } })?.data?.message ??
+        'Could not save settings. Your changes have not been applied — please try again.';
+      enqueueSnackbar(message, { variant: 'error' });
     }
   };
 

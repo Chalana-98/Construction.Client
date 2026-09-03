@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -33,7 +36,6 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import OutputIcon from '@mui/icons-material/Output';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetMaterialsQuery } from '@/features/materials/api';
 import { useGetFlatWbsByProjectQuery } from '@/features/wbs/api';
 import { useGetCostCodesByProjectQuery } from '@/features/cost-control/api';
@@ -48,11 +50,9 @@ import {
 import { MaterialRequestStatus, MaterialRequestStatusLabels, type MaterialRequestDto } from '@/types';
 
 export default function MaterialRequestsPage() {
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
+  const { enqueueSnackbar } = useSnackbar();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: requests = [], isLoading } = useGetMaterialRequestsByProjectQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -111,26 +111,30 @@ export default function MaterialRequestsPage() {
   };
 
   const handleCreate = async () => {
-    const validItems = items.filter((i) => i.materialId);
-    if (!activeProjectId || validItems.length === 0) return;
+    try {
+      const validItems = items.filter((i) => i.materialId);
+      if (!activeProjectId || validItems.length === 0) return;
 
-    await createMR({
-      projectId: activeProjectId,
-      wbsId: wbsId || undefined,
-      costCodeId: costCodeId || undefined,
-      requiredDate,
-      priority,
-      reason,
-      notes,
-      items: validItems,
-    }).unwrap();
+      await createMR({
+        projectId: activeProjectId,
+        wbsId: wbsId || undefined,
+        costCodeId: costCodeId || undefined,
+        requiredDate,
+        priority,
+        reason,
+        notes,
+        items: validItems,
+      }).unwrap();
 
-    setOpenModal(false);
-    setWbsId('');
-    setCostCodeId('');
-    setReason('');
-    setNotes('');
-    setItems([{ materialId: '', requestedQuantity: 1, unit: 'pcs' }]);
+      setOpenModal(false);
+      setWbsId('');
+      setCostCodeId('');
+      setReason('');
+      setNotes('');
+      setItems([{ materialId: '', requestedQuantity: 1, unit: 'pcs' }]);
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const openIssueDialog = (mr: MaterialRequestDto) => {
@@ -143,22 +147,26 @@ export default function MaterialRequestsPage() {
   };
 
   const handleConfirmIssue = async () => {
-    if (!issueModalMR) return;
-    const issuePayload = Object.entries(issuedQuantities)
-      .filter(([_, qty]) => qty > 0)
-      .map(([itemId, qty]) => ({
-        materialRequestItemId: itemId,
-        quantityIssued: qty,
-      }));
+    try {
+      if (!issueModalMR) return;
+      const issuePayload = Object.entries(issuedQuantities)
+        .filter(([_, qty]) => qty > 0)
+        .map(([itemId, qty]) => ({
+          materialRequestItemId: itemId,
+          quantityIssued: qty,
+        }));
 
-    if (issuePayload.length === 0) return;
+      if (issuePayload.length === 0) return;
 
-    await issueMR({
-      id: issueModalMR.id,
-      issuedItems: issuePayload,
-    }).unwrap();
+      await issueMR({
+        id: issueModalMR.id,
+        issuedItems: issuePayload,
+      }).unwrap();
 
-    setIssueModalMR(null);
+      setIssueModalMR(null);
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   return (
@@ -179,7 +187,7 @@ export default function MaterialRequestsPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>

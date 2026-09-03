@@ -1,47 +1,52 @@
+import { lazy, Suspense } from 'react';
+import Loading from '@/components/Loading';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import LoginPage from '@/features/auth/LoginPage';
 import RegisterPage from '@/features/auth/RegisterPage';
 import DashboardPage from '@/features/dashboard/DashboardPage';
-import ProjectsPage from '@/features/projects/ProjectsPage';
-import DailyLogsPage from './features/daily-logs/DailyLogsPage';
-import DocumentsPage from './features/documents/DocumentsPage';
-import EquipmentPage from './features/equipment/EquipmentPage';
-import ExpensesPage from './features/expenses/ExpensesPage';
-import IssuesPage from './features/issues/IssuesPage';
-import MaterialsPage from './features/materials/MaterialsPage';
-import MilestonesPage from './features/milestones/MilestonesPage';
-import ProjectDetailPage from './features/projects/ProjectDetailPage';
-import TasksPage from './features/tasks/TasksPage';
-import TeamPage from './features/team/TeamPage';
-import RFIsPage from './features/rfis/RFIsPage';
-import ChangeOrdersPage from './features/change-orders/ChangeOrdersPage';
-import VendorsPage from './features/vendors/VendorsPage';
-import TimesheetsPage from './features/timesheets/TimesheetsPage';
-import ProfilePage from './features/profile/ProfilePage';
-import SettingsPage from './features/settings/SettingsPage';
+
+// Route-level code splitting: only the screens actually visited are downloaded.
+const ProjectsPage = lazy(() => import('@/features/projects/ProjectsPage'));
+const DailyLogsPage = lazy(() => import('./features/daily-logs/DailyLogsPage'));
+const DocumentsPage = lazy(() => import('./features/documents/DocumentsPage'));
+const EquipmentPage = lazy(() => import('./features/equipment/EquipmentPage'));
+const ExpensesPage = lazy(() => import('./features/expenses/ExpensesPage'));
+const IssuesPage = lazy(() => import('./features/issues/IssuesPage'));
+const MaterialsPage = lazy(() => import('./features/materials/MaterialsPage'));
+const MilestonesPage = lazy(() => import('./features/milestones/MilestonesPage'));
+const ProjectDetailPage = lazy(() => import('./features/projects/ProjectDetailPage'));
+const TasksPage = lazy(() => import('./features/tasks/TasksPage'));
+const TeamPage = lazy(() => import('./features/team/TeamPage'));
+const RFIsPage = lazy(() => import('./features/rfis/RFIsPage'));
+const ChangeOrdersPage = lazy(() => import('./features/change-orders/ChangeOrdersPage'));
+const VendorsPage = lazy(() => import('./features/vendors/VendorsPage'));
+const TimesheetsPage = lazy(() => import('./features/timesheets/TimesheetsPage'));
+const ProfilePage = lazy(() => import('./features/profile/ProfilePage'));
+const SettingsPage = lazy(() => import('./features/settings/SettingsPage'));
+const CostControlPage = lazy(() => import('./features/cost-control/CostControlPage'));
+const WbsPage = lazy(() => import('./features/wbs/WbsPage'));
+const ProcurementPage = lazy(() => import('./features/procurement/ProcurementPage'));
+const PurchaseOrdersPage = lazy(() => import('./features/purchase-orders/PurchaseOrdersPage'));
+const MaterialRequestsPage = lazy(() => import('./features/material-requests/MaterialRequestsPage'));
+const InventoryLedgerPage = lazy(() => import('./features/inventory-ledger/InventoryLedgerPage'));
+const PhysicalProgressPage = lazy(() => import('./features/physical-progress/PhysicalProgressPage'));
+const ScheduleGanttPage = lazy(() => import('./features/schedule/ScheduleGanttPage'));
+const ProjectBillingPage = lazy(() => import('./features/billing/ProjectBillingPage'));
+const SafetyPage = lazy(() => import('./features/safety/SafetyPage'));
+const QualityPage = lazy(() => import('./features/quality/QualityPage'));
+const SubcontractsPage = lazy(() => import('./features/subcontracts/SubcontractsPage'));
+const ApprovalsPage = lazy(() => import('./features/approvals/ApprovalsPage'));
+const KpiDashboardPage = lazy(() => import('./features/kpi-dashboard/KpiDashboardPage'));
+const EquipmentMaintenancePage = lazy(() => import('./features/equipment-maintenance/EquipmentMaintenancePage'));
 
 // Enterprise Construction ERP Modules
-import CostControlPage from './features/cost-control/CostControlPage';
-import WbsPage from './features/wbs/WbsPage';
-import ProcurementPage from './features/procurement/ProcurementPage';
-import PurchaseOrdersPage from './features/purchase-orders/PurchaseOrdersPage';
-import MaterialRequestsPage from './features/material-requests/MaterialRequestsPage';
-import InventoryLedgerPage from './features/inventory-ledger/InventoryLedgerPage';
-import PhysicalProgressPage from './features/physical-progress/PhysicalProgressPage';
-import ScheduleGanttPage from './features/schedule/ScheduleGanttPage';
-import ProjectBillingPage from './features/billing/ProjectBillingPage';
-import SafetyPage from './features/safety/SafetyPage';
-import QualityPage from './features/quality/QualityPage';
-import SubcontractsPage from './features/subcontracts/SubcontractsPage';
-import ApprovalsPage from './features/approvals/ApprovalsPage';
-import KpiDashboardPage from './features/kpi-dashboard/KpiDashboardPage';
-import EquipmentMaintenancePage from './features/equipment-maintenance/EquipmentMaintenancePage';
 
 export default function App() {
   return (
     <BrowserRouter>
+      <Suspense fallback={<Loading />}>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -89,6 +94,7 @@ export default function App() {
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

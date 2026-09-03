@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -29,7 +32,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import {
   useGetCostCodeSummaryQuery,
   useCreateCostCodeMutation,
@@ -39,12 +41,10 @@ import { CostCodeCategory, CostCodeCategoryLabels } from '@/types';
 import { useCurrency } from '@/utils/currency';
 
 export default function CostControlPage() {
+  const { enqueueSnackbar } = useSnackbar();
   const { symbol } = useCurrency();
-  const { data: projectsData, isLoading: projectsLoading } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: summary, isLoading: summaryLoading } = useGetCostCodeSummaryQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -61,26 +61,34 @@ export default function CostControlPage() {
   const [description, setDescription] = useState('');
 
   const handleCreate = async () => {
-    if (!activeProjectId || !code || !name) return;
-    await createCostCode({
-      projectId: activeProjectId,
-      code,
-      name,
-      category,
-      originalBudget: Number(originalBudget) || 0,
-      description,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !code || !name) return;
+      await createCostCode({
+        projectId: activeProjectId,
+        code,
+        name,
+        category,
+        originalBudget: Number(originalBudget) || 0,
+        description,
+      }).unwrap();
 
-    setOpenModal(false);
-    setCode('');
-    setName('');
-    setOriginalBudget('');
-    setDescription('');
+      setOpenModal(false);
+      setCode('');
+      setName('');
+      setOriginalBudget('');
+      setDescription('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleSeed = async () => {
-    if (!activeProjectId) return;
-    await seedStandardCostCodes(activeProjectId).unwrap();
+    try {
+      if (!activeProjectId) return;
+      await seedStandardCostCodes(activeProjectId).unwrap();
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   return (
@@ -102,7 +110,7 @@ export default function CostControlPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
@@ -133,7 +141,7 @@ export default function CostControlPage() {
       </Box>
 
       {/* Summary KPI Cards */}
-      {summaryLoading || projectsLoading ? (
+      {summaryLoading ? (
         <CircularProgress sx={{ display: 'block', mx: 'auto', my: 4 }} />
       ) : !activeProjectId ? (
         <Alert severity="info">Please select a project to view cost control metrics.</Alert>
@@ -237,7 +245,9 @@ export default function CostControlPage() {
                   ) : (
                     summary?.costCodes.map((cc) => {
                       const totalUsed = cc.committedCost + cc.actualCost;
-                      const pct = cc.originalBudget > 0 ? Math.min(100, Math.round((totalUsed / cc.originalBudget) * 100)) : 0;
+                      // Not clamped to 100: hiding overruns on the budget-control screen defeats its purpose.
+                      const pct = cc.originalBudget > 0 ? Math.round((totalUsed / cc.originalBudget) * 100) : 0;
+                      const isOverBudget = pct > 100;
                       return (
                         <TableRow key={cc.id} hover>
                           <TableCell sx={{ fontWeight: 600 }}>{cc.code}</TableCell>
@@ -273,14 +283,20 @@ export default function CostControlPage() {
                           </TableCell>
                           <TableCell>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {/* The bar itself caps at 100% because it cannot render further,
+                                  but the figure beside it shows the true percentage. */}
                               <LinearProgress
                                 variant="determinate"
-                                value={pct}
-                                color={pct > 90 ? 'error' : pct > 70 ? 'warning' : 'primary'}
+                                value={Math.min(100, pct)}
+                                color={isOverBudget || pct > 90 ? 'error' : pct > 70 ? 'warning' : 'primary'}
                                 sx={{ flexGrow: 1, height: 6, borderRadius: 3 }}
                               />
-                              <Typography variant="caption" fontWeight={600}>
-                                {pct}%
+                              <Typography
+                                variant="caption"
+                                fontWeight={600}
+                                color={isOverBudget ? 'error.main' : 'text.primary'}
+                              >
+                                {pct}%{isOverBudget ? ' over' : ''}
                               </Typography>
                             </Box>
                           </TableCell>
@@ -328,7 +344,7 @@ export default function CostControlPage() {
             </Select>
           </FormControl>
           <TextField
-            label="Original Budget ($)"
+            label={`Original Budget (${symbol})`}
             type="number"
             value={originalBudget}
             onChange={(e) => setOriginalBudget(e.target.value)}

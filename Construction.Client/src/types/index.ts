@@ -252,6 +252,8 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   token: string;
+  /** Exchanged for a new access token when the short-lived one expires. */
+  refreshToken?: string;
   expiresAt: string;
   userId: string;
   email: string;
