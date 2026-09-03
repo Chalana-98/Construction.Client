@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -28,7 +31,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import TuneIcon from '@mui/icons-material/Tune';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetMaterialsQuery } from '@/features/materials/api';
 import { useGetFlatWbsByProjectQuery } from '@/features/wbs/api';
 import { useGetCostCodesByProjectQuery } from '@/features/cost-control/api';
@@ -45,12 +47,10 @@ import {
 import { useCurrency } from '@/utils/currency';
 
 export default function InventoryLedgerPage() {
+  const { enqueueSnackbar } = useSnackbar();
   const { symbol } = useCurrency();
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const [tab, setTab] = useState(0);
 
@@ -105,38 +105,46 @@ export default function InventoryLedgerPage() {
   };
 
   const handleCreateTx = async () => {
-    if (!activeProjectId || !materialId || !quantity) return;
-    await createTx({
-      projectId: activeProjectId,
-      materialId,
-      transactionType: txType,
-      quantity: Number(quantity),
-      unit,
-      unitCost: Number(unitCost) || undefined,
-      location,
-      wbsId: wbsId || undefined,
-      costCodeId: costCodeId || undefined,
-      notes,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !materialId || !quantity) return;
+      await createTx({
+        projectId: activeProjectId,
+        materialId,
+        transactionType: txType,
+        quantity: Number(quantity),
+        unit,
+        unitCost: Number(unitCost) || undefined,
+        location,
+        wbsId: wbsId || undefined,
+        costCodeId: costCodeId || undefined,
+        notes,
+      }).unwrap();
 
-    setOpenTxModal(false);
-    setMaterialId('');
-    setQuantity('');
-    setNotes('');
+      setOpenTxModal(false);
+      setMaterialId('');
+      setQuantity('');
+      setNotes('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleAdjust = async () => {
-    if (!activeProjectId || !adjustMaterialId || adjustNewQty === '') return;
-    await adjustStock({
-      projectId: activeProjectId,
-      materialId: adjustMaterialId,
-      newQuantity: Number(adjustNewQty),
-      reason: adjustReason,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !adjustMaterialId || adjustNewQty === '') return;
+      await adjustStock({
+        projectId: activeProjectId,
+        materialId: adjustMaterialId,
+        newQuantity: Number(adjustNewQty),
+        reason: adjustReason,
+      }).unwrap();
 
-    setOpenAdjustModal(false);
-    setAdjustMaterialId('');
-    setAdjustNewQty('');
+      setOpenAdjustModal(false);
+      setAdjustMaterialId('');
+      setAdjustNewQty('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   return (
@@ -157,7 +165,7 @@ export default function InventoryLedgerPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>

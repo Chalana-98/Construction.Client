@@ -15,6 +15,7 @@ import {
   useReactivateProjectMemberMutation,
 } from '@/features/team/api';
 import { useGetProjectsQuery } from '@/features/projects/api';
+import { useGetUsersQuery } from '@/features/users/api';
 import type { ProjectMemberDto } from '@/types';
 import Loading from '@/components/Loading';
 import ErrorDisplay from '@/components/ErrorDisplay';
@@ -40,7 +41,7 @@ const teamValidationSchema = Yup.object({
   projectId: Yup.string()
     .required('Project selection is required.'),
   userId: Yup.string()
-    .required('User ID is required.'),
+    .required('Please choose a team member.'),
   role: Yup.string()
     .required('Role is required.'),
 
@@ -58,6 +59,12 @@ export default function TeamPage() {
     page, pageSize: 15,
     role: roleFilter || undefined,
   });
+  // Populates the member picker. Previously this dialog asked the operator to type a raw UUID,
+  // because no endpoint existed to list the company's users.
+  const { data: usersData, isLoading: usersLoading } = useGetUsersQuery({
+    page: 1, pageSize: 200, includeInactive: false,
+  });
+  const availableUsers = usersData?.items ?? [];
   const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 100 });
   const [addMember, { isLoading: adding }] = useAddProjectMemberMutation();
   const [removeMember, { isLoading: removing }] = useRemoveProjectMemberMutation();
@@ -264,16 +271,30 @@ export default function TeamPage() {
             <Grid size={{ xs: 12 }}>
               <TextField
                 fullWidth
+                select
                 id="userId"
                 name="userId"
-                label="User ID"
+                label="Team member"
                 value={formik.values.userId}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}
                 required
+                disabled={usersLoading}
                 error={formik.touched.userId && Boolean(formik.errors.userId)}
-                helperText={formik.touched.userId && formik.errors.userId}
-              />
+                helperText={
+                  (formik.touched.userId && formik.errors.userId) ||
+                  (availableUsers.length === 0 && !usersLoading
+                    ? 'No colleagues yet — an administrator can add people under Settings › Users.'
+                    : 'Choose a person from your company.')
+                }
+              >
+                {availableUsers.map((u) => (
+                  <MenuItem key={u.id} value={u.id}>
+                    {u.fullName?.trim() || `${u.firstName} ${u.lastName}`.trim() || u.email}
+                    {u.email ? ` — ${u.email}` : ''}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField

@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -30,7 +33,6 @@ import {
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import {
   useGetSafetyIncidentsQuery,
   useGetSafetyInspectionsQuery,
@@ -45,11 +47,9 @@ import {
 } from '@/types';
 
 export default function SafetyPage() {
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
+  const { enqueueSnackbar } = useSnackbar();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const [tab, setTab] = useState(0);
 
@@ -85,38 +85,46 @@ export default function SafetyPage() {
   const [tbNotes, setTbNotes] = useState('');
 
   const handleCreateIncident = async () => {
-    if (!activeProjectId || !incDescription) return;
-    await createIncident({
-      projectId: activeProjectId,
-      incidentDateTime: new Date().toISOString(),
-      location: incLocation || 'Jobsite',
-      personInvolved: personInvolved || 'Field Worker',
-      incidentType,
-      severity,
-      description: incDescription,
-      immediateAction: immediateAction || 'Area isolated and secured.',
-      correctiveAction: correctiveAction || 'Toolbox briefing conducted.',
-    }).unwrap();
+    try {
+      if (!activeProjectId || !incDescription) return;
+      await createIncident({
+        projectId: activeProjectId,
+        incidentDateTime: new Date().toISOString(),
+        location: incLocation || 'Jobsite',
+        personInvolved: personInvolved || 'Field Worker',
+        incidentType,
+        severity,
+        description: incDescription,
+        immediateAction: immediateAction || 'Area isolated and secured.',
+        correctiveAction: correctiveAction || 'Toolbox briefing conducted.',
+      }).unwrap();
 
-    setOpenIncModal(false);
-    setIncDescription('');
-    setImmediateAction('');
-    setCorrectiveAction('');
+      setOpenIncModal(false);
+      setIncDescription('');
+      setImmediateAction('');
+      setCorrectiveAction('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleCreateToolbox = async () => {
-    if (!activeProjectId || !tbTopic) return;
-    await createToolboxTalk({
-      projectId: activeProjectId,
-      topic: tbTopic,
-      date: new Date().toISOString(),
-      attendanceCount: Number(attendanceCount) || 1,
-      notes: tbNotes,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !tbTopic) return;
+      await createToolboxTalk({
+        projectId: activeProjectId,
+        topic: tbTopic,
+        date: new Date().toISOString(),
+        attendanceCount: Number(attendanceCount) || 1,
+        notes: tbNotes,
+      }).unwrap();
 
-    setOpenTbModal(false);
-    setTbTopic('');
-    setTbNotes('');
+      setOpenTbModal(false);
+      setTbTopic('');
+      setTbNotes('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   return (
@@ -137,7 +145,7 @@ export default function SafetyPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>

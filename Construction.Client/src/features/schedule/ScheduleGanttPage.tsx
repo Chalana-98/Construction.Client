@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -26,7 +29,6 @@ import FlagIcon from '@mui/icons-material/Flag';
 import WarningIcon from '@mui/icons-material/Warning';
 import LinkIcon from '@mui/icons-material/Link';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetFlatWbsByProjectQuery } from '@/features/wbs/api';
 import { useGetCostCodesByProjectQuery } from '@/features/cost-control/api';
 import {
@@ -37,11 +39,9 @@ import {
 } from './api';
 
 export default function ScheduleGanttPage() {
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
+  const { enqueueSnackbar } = useSnackbar();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: gantt, isLoading } = useGetGanttChartDataQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -79,33 +79,41 @@ export default function ScheduleGanttPage() {
   const [successorId, setSuccessorId] = useState('');
 
   const handleCreate = async () => {
-    if (!activeProjectId || !activityCode || !activityName) return;
-    await createActivity({
-      projectId: activeProjectId,
-      activityCode,
-      activityName,
-      wbsId: wbsId || undefined,
-      costCodeId: costCodeId || undefined,
-      startDate,
-      endDate,
-      plannedQuantity: Number(plannedQty) || undefined,
-      unit: unit || undefined,
-      isMilestone,
-      description,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !activityCode || !activityName) return;
+      await createActivity({
+        projectId: activeProjectId,
+        activityCode,
+        activityName,
+        wbsId: wbsId || undefined,
+        costCodeId: costCodeId || undefined,
+        startDate,
+        endDate,
+        plannedQuantity: Number(plannedQty) || undefined,
+        unit: unit || undefined,
+        isMilestone,
+        description,
+      }).unwrap();
 
-    setOpenModal(false);
-    setActivityCode('');
-    setActivityName('');
-    setDescription('');
+      setOpenModal(false);
+      setActivityCode('');
+      setActivityName('');
+      setDescription('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleAddDependency = async () => {
-    if (!predecessorId || !successorId || predecessorId === successorId) return;
-    await addDependency({ predecessorId, successorId }).unwrap();
-    setOpenDepModal(false);
-    setPredecessorId('');
-    setSuccessorId('');
+    try {
+      if (!predecessorId || !successorId || predecessorId === successorId) return;
+      await addDependency({ predecessorId, successorId }).unwrap();
+      setOpenDepModal(false);
+      setPredecessorId('');
+      setSuccessorId('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const activities = gantt?.activities ?? [];
@@ -143,7 +151,7 @@ export default function ScheduleGanttPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>

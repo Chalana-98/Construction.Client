@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    working-directory: Construction.Client
+
+jobs:
+  build:
+    name: Lint, typecheck & build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Construction.Client/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Reported but non-blocking: the repository has pre-existing lint errors (impure calls
+      # during render, setState-in-effect). Drop `continue-on-error` once those are cleared,
+      # so lint regressions start failing the build.
+      - name: Lint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Build (type-checks, then bundles)
+        run: npm run build
+
+      # The demo bypass and its fixtures must never reach a production bundle: anyone could
+      # otherwise activate it by setting the auth token to the literal string 'demo-token'.
+      - name: Assert demo mode is excluded from the production bundle
+        run: |
+          if grep -rq "demo-token" dist/assets/*.js; then
+            echo "::error::Demo authentication bypass found in the production bundle."
+            exit 1
+          fi
+          echo "Demo mode correctly excluded from the production bundle."

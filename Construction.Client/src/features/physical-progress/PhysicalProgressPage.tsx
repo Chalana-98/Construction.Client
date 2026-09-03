@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -31,7 +34,6 @@ import {
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetFlatWbsByProjectQuery } from '@/features/wbs/api';
 import {
   useGetProjectProgressSummaryQuery,
@@ -40,11 +42,9 @@ import {
 } from './api';
 
 export default function PhysicalProgressPage() {
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
+  const { enqueueSnackbar } = useSnackbar();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: summary, isLoading } = useGetProjectProgressSummaryQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -76,25 +76,29 @@ export default function PhysicalProgressPage() {
   };
 
   const handleCreate = async () => {
-    if (!activeProjectId || !activityName || !plannedQty) return;
-    await logProgress({
-      projectId: activeProjectId,
-      wbsId: wbsId || undefined,
-      activityName,
-      plannedQuantity: Number(plannedQty),
-      completedQuantity: Number(completedQty) || 0,
-      unit,
-      plannedStartDate: plannedStartDate || undefined,
-      plannedEndDate: plannedEndDate || undefined,
-      notes,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !activityName || !plannedQty) return;
+      await logProgress({
+        projectId: activeProjectId,
+        wbsId: wbsId || undefined,
+        activityName,
+        plannedQuantity: Number(plannedQty),
+        completedQuantity: Number(completedQty) || 0,
+        unit,
+        plannedStartDate: plannedStartDate || undefined,
+        plannedEndDate: plannedEndDate || undefined,
+        notes,
+      }).unwrap();
 
-    setOpenModal(false);
-    setWbsId('');
-    setActivityName('');
-    setPlannedQty('');
-    setCompletedQty('');
-    setNotes('');
+      setOpenModal(false);
+      setWbsId('');
+      setActivityName('');
+      setPlannedQty('');
+      setCompletedQty('');
+      setNotes('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   return (
@@ -115,7 +119,7 @@ export default function PhysicalProgressPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>

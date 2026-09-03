@@ -338,7 +338,7 @@ export default function MilestonesPage() {
                 fullWidth
                 id="paymentAmount"
                 name="paymentAmount"
-                label="Milestone Billing Amount ($)"
+                label={`Milestone Billing Amount (${symbol})`}
                 value={formik.values.paymentAmount}
                 onChange={formik.handleChange}
                 onBlur={formik.handleBlur}

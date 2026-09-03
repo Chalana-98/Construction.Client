@@ -17,19 +17,46 @@ import {
 type StatusValue = ProjectStatus | TaskStatus | IssueStatus | EquipmentStatus;
 type PriorityValue = TaskPriority | IssuePriority;
 
-const statusColorMap: Record<number, ChipProps['color']> = {
-  // Planning / NotStarted / Open / Available
-  0: 'default',
-  // Approved / InProgress / UnderReview / InUse
-  1: 'info',
-  // InProgress / OnHold / InProgress / UnderMaintenance
-  2: 'primary',
-  // OnHold / Completed / Resolved / OutOfService
-  3: 'success',
-  // Completed / Cancelled / Closed / Retired
-  4: 'success',
-  // Cancelled / Blocked / Rejected
-  5: 'error',
+/**
+ * Colour is mapped per enum, not by raw ordinal.
+ *
+ * A single shared map keyed on the numeric value collided across enums whose ordinals mean
+ * different things — ProjectStatus.OnHold (3) and EquipmentStatus.OutOfService (3) both
+ * rendered green, so a stalled project and broken plant read as healthy.
+ */
+const projectStatusColors: Record<ProjectStatus, ChipProps['color']> = {
+  [ProjectStatus.Planning]: 'default',
+  [ProjectStatus.Approved]: 'info',
+  [ProjectStatus.InProgress]: 'primary',
+  [ProjectStatus.OnHold]: 'warning',
+  [ProjectStatus.Completed]: 'success',
+  [ProjectStatus.Cancelled]: 'error',
+};
+
+const taskStatusColors: Record<TaskStatus, ChipProps['color']> = {
+  [TaskStatus.NotStarted]: 'default',
+  [TaskStatus.InProgress]: 'primary',
+  [TaskStatus.OnHold]: 'warning',
+  [TaskStatus.Completed]: 'success',
+  [TaskStatus.Cancelled]: 'default',
+  [TaskStatus.Blocked]: 'error',
+};
+
+const issueStatusColors: Record<IssueStatus, ChipProps['color']> = {
+  [IssueStatus.Open]: 'error',
+  [IssueStatus.UnderReview]: 'warning',
+  [IssueStatus.InProgress]: 'primary',
+  [IssueStatus.Resolved]: 'success',
+  [IssueStatus.Closed]: 'default',
+  [IssueStatus.Rejected]: 'default',
+};
+
+const equipmentStatusColors: Record<EquipmentStatus, ChipProps['color']> = {
+  [EquipmentStatus.Available]: 'success',
+  [EquipmentStatus.InUse]: 'primary',
+  [EquipmentStatus.UnderMaintenance]: 'warning',
+  [EquipmentStatus.OutOfService]: 'error',
+  [EquipmentStatus.Retired]: 'default',
 };
 
 const priorityColorMap: Record<number, ChipProps['color']> = {
@@ -53,12 +80,24 @@ export function StatusChip({ type, value, size = 'small' }: StatusChipProps) {
     equipmentStatus: EquipmentStatusLabels,
   };
 
+  const colorMap: Record<StatusChipProps['type'], Record<number, ChipProps['color']>> = {
+    projectStatus: projectStatusColors,
+    taskStatus: taskStatusColors,
+    issueStatus: issueStatusColors,
+    equipmentStatus: equipmentStatusColors,
+  };
+
+  const label = labelMap[type][value as keyof (typeof labelMap)[typeof type]] ?? 'Unknown';
+
   return (
     <Chip
-      label={labelMap[type][value as keyof (typeof labelMap)[typeof type]] ?? 'Unknown'}
-      color={statusColorMap[value] ?? 'default'}
+      label={label}
+      color={colorMap[type][value] ?? 'default'}
       size={size}
       variant="outlined"
+      // Status is also conveyed by the label text, so the meaning does not depend on colour
+      // alone for colour-blind users.
+      aria-label={`Status: ${label}`}
     />
   );
 }

@@ -19,6 +19,9 @@ export interface SettingsState {
 const storedCurrency = localStorage.getItem('app_currency') || 'LKR';
 const storedCurrencySymbol = localStorage.getItem('app_currency_symbol') || (storedCurrency === 'USD' ? '$' : 'Rs.');
 
+// Company identity defaults to empty and is populated from the tenant's own settings.
+// It previously shipped a real-looking company name, VAT number, phone and address, which a
+// genuine customer would see on their own Settings page whenever the settings request failed.
 const initialState: SettingsState = {
   currency: storedCurrency,
   currencySymbol: storedCurrencySymbol,
@@ -28,10 +31,10 @@ const initialState: SettingsState = {
   defaultRetentionRate: Number(localStorage.getItem('app_retention_rate')) || 5.0,
   defaultDailyWorkingHours: Number(localStorage.getItem('app_working_hours')) || 8,
   autoApprovalLimit: Number(localStorage.getItem('app_auto_approval')) || 50000,
-  companyName: localStorage.getItem('app_company_name') || 'Ceylon BuildTech Engineering (Pvt) Ltd',
-  taxRegistrationNumber: localStorage.getItem('app_tax_number') || 'PV-00284719 / VAT-11482934',
-  contactPhone: localStorage.getItem('app_contact_phone') || '+94 11 288 9400',
-  address: localStorage.getItem('app_address') || 'Level 14, Lotus Tower Commercial Complex, Colombo 02, Sri Lanka',
+  companyName: localStorage.getItem('app_company_name') || '',
+  taxRegistrationNumber: localStorage.getItem('app_tax_number') || '',
+  contactPhone: localStorage.getItem('app_contact_phone') || '',
+  address: localStorage.getItem('app_address') || '',
 };
 
 const settingsSlice = createSlice({

@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -32,7 +35,6 @@ import AddIcon from '@mui/icons-material/Add';
 import PaidIcon from '@mui/icons-material/Paid';
 import PostAddIcon from '@mui/icons-material/PostAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetVendorsQuery } from '@/features/vendors/api';
 import { useGetFlatWbsByProjectQuery } from '@/features/wbs/api';
 import { useGetCostCodesByProjectQuery } from '@/features/cost-control/api';
@@ -47,12 +49,10 @@ import { SubcontractStatus, type SubcontractDto } from '@/types';
 import { useCurrency } from '@/utils/currency';
 
 export default function SubcontractsPage() {
+  const { enqueueSnackbar } = useSnackbar();
   const { symbol } = useCurrency();
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: subcontracts = [], isLoading } = useGetSubcontractsByProjectQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -101,56 +101,68 @@ export default function SubcontractsPage() {
   const [coDays, setCoDays] = useState('0');
 
   const handleCreate = async () => {
-    if (!activeProjectId || !vendorId || !originalContractValue || !scopeOfWork) return;
-    await createSubcontract({
-      projectId: activeProjectId,
-      vendorId,
-      wbsId: wbsId || undefined,
-      costCodeId: costCodeId || undefined,
-      scopeOfWork,
-      originalContractValue: Number(originalContractValue),
-      retentionPercentage: Number(retentionPercentage) || 10,
-      startDate,
-      endDate,
-      paymentTerms,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !vendorId || !originalContractValue || !scopeOfWork) return;
+      await createSubcontract({
+        projectId: activeProjectId,
+        vendorId,
+        wbsId: wbsId || undefined,
+        costCodeId: costCodeId || undefined,
+        scopeOfWork,
+        originalContractValue: Number(originalContractValue),
+        retentionPercentage: Number(retentionPercentage) || 10,
+        startDate,
+        endDate,
+        paymentTerms,
+      }).unwrap();
 
-    setOpenModal(false);
-    setVendorId('');
-    setScopeOfWork('');
-    setOriginalContractValue('');
+      setOpenModal(false);
+      setVendorId('');
+      setScopeOfWork('');
+      setOriginalContractValue('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handlePayment = async () => {
-    if (!paymentModalSC || !grossAmount) return;
-    await recordPayment({
-      id: paymentModalSC.id,
-      data: {
-        grossAmount: Number(grossAmount),
-        retentionDeducted: Number(retentionDeducted) || (Number(grossAmount) * 0.1),
-        referenceNumber: paymentRef || `SCPAY-${Date.now().toString().slice(-5)}`,
-      },
-    }).unwrap();
+    try {
+      if (!paymentModalSC || !grossAmount) return;
+      await recordPayment({
+        id: paymentModalSC.id,
+        data: {
+          grossAmount: Number(grossAmount),
+          retentionDeducted: Number(retentionDeducted) || (Number(grossAmount) * 0.1),
+          referenceNumber: paymentRef || `SCPAY-${Date.now().toString().slice(-5)}`,
+        },
+      }).unwrap();
 
-    setPaymentModalSC(null);
-    setGrossAmount('');
-    setRetentionDeducted('');
+      setPaymentModalSC(null);
+      setGrossAmount('');
+      setRetentionDeducted('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleAddCO = async () => {
-    if (!coModalSC || !coTitle || !coAmount) return;
-    await addChangeOrder({
-      id: coModalSC.id,
-      data: {
-        title: coTitle,
-        amount: Number(coAmount),
-        scheduleImpactDays: Number(coDays) || 0,
-      },
-    }).unwrap();
+    try {
+      if (!coModalSC || !coTitle || !coAmount) return;
+      await addChangeOrder({
+        id: coModalSC.id,
+        data: {
+          title: coTitle,
+          amount: Number(coAmount),
+          scheduleImpactDays: Number(coDays) || 0,
+        },
+      }).unwrap();
 
-    setCoModalSC(null);
-    setCoTitle('');
-    setCoAmount('');
+      setCoModalSC(null);
+      setCoTitle('');
+      setCoAmount('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   // Stats
@@ -177,7 +189,7 @@ export default function SubcontractsPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
@@ -390,7 +402,7 @@ export default function SubcontractsPage() {
 
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField
-              label="Original Contract Value ($)"
+              label={`Original Contract Value (${symbol})`}
               type="number"
               value={originalContractValue}
               onChange={(e) => setOriginalContractValue(e.target.value)}
@@ -445,7 +457,7 @@ export default function SubcontractsPage() {
         <DialogTitle>Certify & Record Subcontract Payment</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
           <TextField
-            label="Certified Gross Work Done ($)"
+            label={`Certified Gross Work Done (${symbol})`}
             type="number"
             value={grossAmount}
             onChange={(e) => setGrossAmount(e.target.value)}
@@ -453,7 +465,7 @@ export default function SubcontractsPage() {
             required
           />
           <TextField
-            label="Retention Deducted ($)"
+            label={`Retention Deducted (${symbol})`}
             type="number"
             value={retentionDeducted}
             onChange={(e) => setRetentionDeducted(e.target.value)}
@@ -487,7 +499,7 @@ export default function SubcontractsPage() {
             required
           />
           <TextField
-            label="Added / Deducted Amount ($)"
+            label={`Added / Deducted Amount (${symbol})`}
             type="number"
             value={coAmount}
             onChange={(e) => setCoAmount(e.target.value)}

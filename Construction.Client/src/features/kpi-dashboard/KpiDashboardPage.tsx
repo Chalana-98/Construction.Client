@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -18,17 +18,13 @@ import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import SpeedIcon from '@mui/icons-material/Speed';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetProjectKpiDashboardQuery } from './api';
 import { useCurrency } from '@/utils/currency';
 
 export default function KpiDashboardPage() {
   const { symbol } = useCurrency();
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: kpi, isLoading } = useGetProjectKpiDashboardQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -52,7 +48,7 @@ export default function KpiDashboardPage() {
           <Select
             value={activeProjectId}
             label="Select Project"
-            onChange={(e) => setSelectedProjectId(e.target.value)}
+            onChange={(e) => selectProject(e.target.value)}
           >
             {projects.map((p) => (
               <MenuItem key={p.id} value={p.id}>

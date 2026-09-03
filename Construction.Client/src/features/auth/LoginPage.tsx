@@ -15,7 +15,11 @@ import { useAppDispatch } from '@/store/hooks';
 import { setCredentials } from '@/store/authSlice';
 import type { AuthResponse } from '@/types';
 
-// ─── Demo bypass — no backend needed ────────────────────────────────────────
+// ─── Demo bypass — development builds only ─────────────────────────────────
+// `import.meta.env.DEV` is statically replaced at build time, so this block and the
+// button that uses it are removed entirely from production bundles.
+const DEMO_ENABLED = import.meta.env.DEV;
+
 const DEMO_AUTH: AuthResponse = {
   token: 'demo-token',
   userId: 'demo-user-id',
@@ -87,7 +91,8 @@ export default function LoginPage() {
             </Typography>
           </Box>
 
-          {/* ── Demo Banner ── */}
+          {/* ── Demo Banner (development builds only) ── */}
+          {DEMO_ENABLED && (
           <Box
             sx={{
               mb: 2, p: 1.5, borderRadius: 2,
@@ -99,16 +104,17 @@ export default function LoginPage() {
               🚧 Just want to explore?
             </Typography>
             <Button
-              fullWidth variant="contained" color="warning" size="large"
+              fullWidth variant="outlined" color="warning" size="medium"
               startIcon={<BoltIcon />} onClick={handleDemoLogin}
-              sx={{ py: 1.2, fontWeight: 700, fontSize: '1rem' }}
+              sx={{ py: 1, fontWeight: 600 }}
             >
-              Continue as Demo (No Login Required)
+              Continue with sample data
             </Button>
             <Typography variant="caption" color="warning.dark" sx={{ mt: 0.5, display: 'block' }}>
-              All UI features enabled · No data will be saved to backend
+              Read-only sample data · nothing is saved
             </Typography>
           </Box>
+          )}
 
           <Divider sx={{ my: 2 }}>
             <Chip label="or sign in with your account" size="small" />

@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -30,7 +33,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useGetEquipmentQuery } from '@/features/equipment/api';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import {
   useGetMaintenanceSummaryQuery,
   useRecordMaintenanceMutation,
@@ -44,13 +46,12 @@ import {
 import { useCurrency } from '@/utils/currency';
 
 export default function EquipmentMaintenancePage() {
+  const { enqueueSnackbar } = useSnackbar();
   const { symbol } = useCurrency();
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
 
-  const { data: summary, isLoading } = useGetMaintenanceSummaryQuery(selectedProjectId || undefined);
+  const { data: summary, isLoading } = useGetMaintenanceSummaryQuery(activeProjectId || undefined);
 
   const { data: equipmentData } = useGetEquipmentQuery({ page: 1, pageSize: 100 });
   const equipmentList = equipmentData?.items ?? [];
@@ -75,27 +76,31 @@ export default function EquipmentMaintenancePage() {
   );
 
   const handleCreate = async () => {
-    if (!equipmentId || !description) return;
-    await recordMaintenance({
-      equipmentId,
-      projectId: projectId || selectedProjectId || undefined,
-      maintenanceType,
-      serviceDate: new Date().toISOString(),
-      meterReadingHours: Number(meterReadingHours) || 0,
-      maintenanceCost: Number(maintenanceCost) || 0,
-      description,
-      partsUsed,
-      nextServiceDate: nextServiceDate || undefined,
-      nextServiceMeterHours: Number(nextServiceMeterHours) || undefined,
-      status,
-    }).unwrap();
+    try {
+      if (!equipmentId || !description) return;
+      await recordMaintenance({
+        equipmentId,
+        projectId: projectId || activeProjectId || undefined,
+        maintenanceType,
+        serviceDate: new Date().toISOString(),
+        meterReadingHours: Number(meterReadingHours) || 0,
+        maintenanceCost: Number(maintenanceCost) || 0,
+        description,
+        partsUsed,
+        nextServiceDate: nextServiceDate || undefined,
+        nextServiceMeterHours: Number(nextServiceMeterHours) || undefined,
+        status,
+      }).unwrap();
 
-    setOpenModal(false);
-    setEquipmentId('');
-    setDescription('');
-    setPartsUsed('');
-    setMaintenanceCost('');
-    setMeterReadingHours('');
+      setOpenModal(false);
+      setEquipmentId('');
+      setDescription('');
+      setPartsUsed('');
+      setMaintenanceCost('');
+      setMeterReadingHours('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const records = summary?.records ?? [];
@@ -116,9 +121,9 @@ export default function EquipmentMaintenancePage() {
           <FormControl size="small" sx={{ minWidth: 200 }}>
             <InputLabel>Filter by Project</InputLabel>
             <Select
-              value={selectedProjectId}
+              value={activeProjectId}
               label="Filter by Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               <MenuItem value="">All Projects</MenuItem>
               {projects.map((p) => (
@@ -354,7 +359,7 @@ export default function EquipmentMaintenancePage() {
               required
             />
             <TextField
-              label="Maintenance Cost ($)"
+              label={`Maintenance Cost (${symbol})`}
               type="number"
               value={maintenanceCost}
               onChange={(e) => setMaintenanceCost(e.target.value)}

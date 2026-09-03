@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -30,7 +33,6 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetCostCodesByProjectQuery } from '@/features/cost-control/api';
 import {
   useGetWbsTreeByProjectQuery,
@@ -43,12 +45,10 @@ import { WbsStatus, WbsStatusLabels, type WbsNodeDto } from '@/types';
 import { useCurrency } from '@/utils/currency';
 
 export default function WbsPage() {
+  const { enqueueSnackbar } = useSnackbar();
   const { symbol } = useCurrency();
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: treeNodes = [], isLoading: treeLoading } = useGetWbsTreeByProjectQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -78,31 +78,39 @@ export default function WbsPage() {
   const [status, setStatus] = useState<WbsStatus>(WbsStatus.Planned);
 
   const handleCreate = async () => {
-    if (!activeProjectId || !wbsCode || !name) return;
-    await createWbsNode({
-      projectId: activeProjectId,
-      wbsCode,
-      name,
-      description,
-      parentWbsId: parentWbsId || undefined,
-      costCodeId: costCodeId || undefined,
-      budget: Number(budget) || 0,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      status,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !wbsCode || !name) return;
+      await createWbsNode({
+        projectId: activeProjectId,
+        wbsCode,
+        name,
+        description,
+        parentWbsId: parentWbsId || undefined,
+        costCodeId: costCodeId || undefined,
+        budget: Number(budget) || 0,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+        status,
+      }).unwrap();
 
-    setOpenModal(false);
-    setWbsCode('');
-    setName('');
-    setDescription('');
-    setParentWbsId('');
-    setCostCodeId('');
-    setBudget('');
+      setOpenModal(false);
+      setWbsCode('');
+      setName('');
+      setDescription('');
+      setParentWbsId('');
+      setCostCodeId('');
+      setBudget('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleProgressChange = async (id: string, newPct: number) => {
-    await updateWbsProgress({ id, progressPercentage: newPct }).unwrap();
+    try {
+      await updateWbsProgress({ id, progressPercentage: newPct }).unwrap();
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const renderTreeRows = (nodes: WbsNodeDto[], depth = 0): React.ReactNode[] => {
@@ -194,7 +202,7 @@ export default function WbsPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>

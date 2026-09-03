@@ -1,44 +1,87 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { Mutex } from './mutex';
 import type { RootState } from '@/store';
-import { DEMO_MOCK_DATA } from './demoMockData';
+import { logout, setCredentials } from './authSlice';
+import type { AuthResponse } from '@/types';
 
+/**
+ * Demo mode ships only in development builds.
+ *
+ * Previously the interceptor and its fixtures were bundled into production, where anyone could
+ * activate an authentication bypass by setting the token to the literal string 'demo-token'.
+ * `import.meta.env.DEV` is statically replaced at build time, so the whole branch — and the
+ * fixture module it imports — is tree-shaken out of a production bundle.
+ */
+const DEMO_ENABLED = import.meta.env.DEV;
 
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: '/api',
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token;
-    const tenantId = (getState() as RootState).auth.user?.tenantId;
     if (token) headers.set('Authorization', `Bearer ${token}`);
-    if (tenantId) headers.set('X-Tenant-Id', tenantId);
+    // NOTE: no X-Tenant-Id header. The server derives the tenant from the signed JWT and
+    // ignores client-supplied tenant headers; sending one implied it was trusted.
     headers.set('Content-Type', 'application/json');
     return headers;
   },
 });
 
-// Demo mode: intercept all queries and return mock data
-const baseQuery: typeof rawBaseQuery = async (args, api, extraOptions) => {
-  const token = (api.getState() as RootState).auth.token;
-  if (token === 'demo-token') {
-    const url = typeof args === 'string' ? args : args.url;
-    const method = typeof args === 'string' ? 'GET' : (args.method ?? 'GET');
+/** Serialises refresh attempts so a burst of 401s triggers exactly one refresh. */
+const refreshMutex = new Mutex();
 
-    // Only intercept reads – let mutations return a stub success
-    if (method === 'GET') {
-      for (const [pattern, data] of Object.entries(DEMO_MOCK_DATA)) {
-        if (url.startsWith(pattern)) {
-          return { data };
-        }
-      }
+const baseQueryWithReauth: typeof rawBaseQuery = async (args, api, extraOptions) => {
+  if (DEMO_ENABLED) {
+    const state = api.getState() as RootState;
+    if (state.auth.token === 'demo-token') {
+      const { demoBaseQuery } = await import('./demoBaseQuery');
+      return demoBaseQuery(args);
     }
-    // Stub all mutations (POST/PUT/DELETE) with a success response
-    return { data: { success: true, message: 'Demo mode: changes are not persisted.' } };
   }
-  return rawBaseQuery(args, api, extraOptions);
+
+  let result = await rawBaseQuery(args, api, extraOptions);
+
+  // Access tokens are short-lived. On a 401, exchange the refresh token once and replay.
+  if (result.error?.status === 401) {
+    const state = api.getState() as RootState;
+    const refreshToken = state.auth.refreshToken;
+
+    if (!refreshToken) {
+      api.dispatch(logout());
+      return result;
+    }
+
+    if (refreshMutex.isLocked()) {
+      // Another request is already refreshing; wait for it and replay.
+      await refreshMutex.waitForUnlock();
+      return rawBaseQuery(args, api, extraOptions);
+    }
+
+    const release = await refreshMutex.acquire();
+    try {
+      const refreshResult = await rawBaseQuery(
+        { url: '/auth/refresh', method: 'POST', body: { refreshToken } },
+        api,
+        extraOptions,
+      );
+
+      if (refreshResult.data) {
+        api.dispatch(setCredentials(refreshResult.data as AuthResponse));
+        result = await rawBaseQuery(args, api, extraOptions);
+      } else {
+        // Refresh token expired or revoked — the session is genuinely over.
+        api.dispatch(logout());
+      }
+    } finally {
+      release();
+    }
+  }
+
+  return result;
 };
 
 export const api = createApi({
   reducerPath: 'api',
-  baseQuery,
+  baseQuery: baseQueryWithReauth,
   tagTypes: [
     'Projects',
     'Tasks',
@@ -72,6 +115,7 @@ export const api = createApi({
     'KpiDashboard',
     'EquipmentMaintenance',
     'Settings',
+    'Users',
   ],
   endpoints: () => ({}),
 });

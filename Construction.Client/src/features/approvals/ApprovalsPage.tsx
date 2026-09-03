@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
 import {
   Box,
   Typography,
@@ -32,6 +34,7 @@ import {
 import { type ApprovalRequestDto } from '@/types';
 
 export default function ApprovalsPage() {
+  const { enqueueSnackbar } = useSnackbar();
   const { data: pendingApprovals = [], isLoading } = useGetPendingApprovalsForMeQuery();
   const [approveRequest, { isLoading: isApproving }] = useApproveRequestMutation();
   const [rejectRequest, { isLoading: isRejecting }] = useRejectRequestMutation();
@@ -48,17 +51,25 @@ export default function ApprovalsPage() {
   const [historyItem, setHistoryItem] = useState<ApprovalRequestDto | null>(null);
 
   const handleApprove = async () => {
-    if (!approveItem) return;
-    await approveRequest({ id: approveItem.id, data: { comments: approveComments } }).unwrap();
-    setApproveItem(null);
-    setApproveComments('');
+    try {
+      if (!approveItem) return;
+      await approveRequest({ id: approveItem.id, data: { comments: approveComments } }).unwrap();
+      setApproveItem(null);
+      setApproveComments('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleReject = async () => {
-    if (!rejectItem || !rejectionReason) return;
-    await rejectRequest({ id: rejectItem.id, data: { rejectionReason } }).unwrap();
-    setRejectItem(null);
-    setRejectionReason('');
+    try {
+      if (!rejectItem || !rejectionReason) return;
+      await rejectRequest({ id: rejectItem.id, data: { rejectionReason } }).unwrap();
+      setRejectItem(null);
+      setRejectionReason('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   return (

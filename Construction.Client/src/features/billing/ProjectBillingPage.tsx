@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -33,7 +36,6 @@ import SendIcon from '@mui/icons-material/Send';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PaidIcon from '@mui/icons-material/Paid';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import {
   useGetBillingApplicationsByProjectQuery,
   useCreateBillingApplicationMutation,
@@ -50,12 +52,10 @@ import {
 import { useCurrency } from '@/utils/currency';
 
 export default function ProjectBillingPage() {
+  const { enqueueSnackbar } = useSnackbar();
   const { symbol } = useCurrency();
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: applications = [], isLoading } = useGetBillingApplicationsByProjectQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -88,43 +88,55 @@ export default function ProjectBillingPage() {
   const [invoiceNumber, setInvoiceNumber] = useState(`INV-${Date.now().toString().slice(-5)}`);
 
   const handleCreate = async () => {
-    if (!activeProjectId || !currentBillingAmount) return;
-    await createApplication({
-      projectId: activeProjectId,
-      billingPeriodStart: periodStart,
-      billingPeriodEnd: periodEnd,
-      currentBillingAmount: Number(currentBillingAmount),
-      retentionPercentage: Number(retentionPercentage) || 0,
-      taxRate: Number(taxRate) || 0,
-      notes,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !currentBillingAmount) return;
+      await createApplication({
+        projectId: activeProjectId,
+        billingPeriodStart: periodStart,
+        billingPeriodEnd: periodEnd,
+        currentBillingAmount: Number(currentBillingAmount),
+        retentionPercentage: Number(retentionPercentage) || 0,
+        taxRate: Number(taxRate) || 0,
+        notes,
+      }).unwrap();
 
-    setOpenModal(false);
-    setCurrentBillingAmount('');
-    setNotes('');
+      setOpenModal(false);
+      setCurrentBillingAmount('');
+      setNotes('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handleApproveSubmit = async () => {
-    if (!approveModalApp || !invoiceNumber) return;
-    await approveApplication({ id: approveModalApp.id, invoiceNumber }).unwrap();
-    setApproveModalApp(null);
+    try {
+      if (!approveModalApp || !invoiceNumber) return;
+      await approveApplication({ id: approveModalApp.id, invoiceNumber }).unwrap();
+      setApproveModalApp(null);
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   const handlePaymentSubmit = async () => {
-    if (!paymentModalApp || !paymentAmount) return;
-    await recordPayment({
-      id: paymentModalApp.id,
-      data: {
-        amount: Number(paymentAmount),
-        paymentDate: new Date().toISOString(),
-        paymentMethod,
-        referenceNumber: refNumber || `WIRE-${Date.now().toString().slice(-6)}`,
-      },
-    }).unwrap();
+    try {
+      if (!paymentModalApp || !paymentAmount) return;
+      await recordPayment({
+        id: paymentModalApp.id,
+        data: {
+          amount: Number(paymentAmount),
+          paymentDate: new Date().toISOString(),
+          paymentMethod,
+          referenceNumber: refNumber || `WIRE-${Date.now().toString().slice(-6)}`,
+        },
+      }).unwrap();
 
-    setPaymentModalApp(null);
-    setPaymentAmount('');
-    setRefNumber('');
+      setPaymentModalApp(null);
+      setPaymentAmount('');
+      setRefNumber('');
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   // Compute stats
@@ -151,7 +163,7 @@ export default function ProjectBillingPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
@@ -368,7 +380,7 @@ export default function ProjectBillingPage() {
           </Box>
 
           <TextField
-            label="Gross Completed Work Amount ($)"
+            label={`Gross Completed Work Amount (${symbol})`}
             type="number"
             value={currentBillingAmount}
             onChange={(e) => setCurrentBillingAmount(e.target.value)}
@@ -435,7 +447,7 @@ export default function ProjectBillingPage() {
         <DialogTitle>Record Client Payment</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
           <TextField
-            label="Payment Amount ($)"
+            label={`Payment Amount (${symbol})`}
             type="number"
             value={paymentAmount}
             onChange={(e) => setPaymentAmount(e.target.value)}

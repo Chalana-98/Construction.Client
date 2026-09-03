@@ -1,4 +1,7 @@
 import { useState } from 'react';
+import { useSnackbar } from 'notistack';
+import { getApiErrorMessage } from '@/utils/useMutationHandler';
+import { useActiveProject } from '@/utils/useActiveProject';
 import {
   Box,
   Typography,
@@ -31,7 +34,6 @@ import AddIcon from '@mui/icons-material/Add';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteIcon from '@mui/icons-material/Delete';
 import RemoveCircleOutlineIcon from '@mui/icons-material/RemoveCircleOutline';
-import { useGetProjectsQuery } from '@/features/projects/api';
 import { useGetVendorsQuery } from '@/features/vendors/api';
 import { useGetFlatWbsByProjectQuery } from '@/features/wbs/api';
 import { useGetCostCodesByProjectQuery } from '@/features/cost-control/api';
@@ -45,12 +47,10 @@ import { ProcurementStatus, ProcurementStatusLabels } from '@/types';
 import { useCurrency } from '@/utils/currency';
 
 export default function ProcurementPage() {
+  const { enqueueSnackbar } = useSnackbar();
   const { symbol } = useCurrency();
-  const { data: projectsData } = useGetProjectsQuery({ page: 1, pageSize: 50 });
-  const projects = projectsData?.items ?? [];
 
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
-  const activeProjectId = selectedProjectId || (projects.length > 0 ? projects[0].id : '');
+  const { activeProjectId, projects, selectProject } = useActiveProject();
 
   const { data: requests = [], isLoading } = useGetProcurementRequestsByProjectQuery(activeProjectId, {
     skip: !activeProjectId,
@@ -97,24 +97,28 @@ export default function ProcurementPage() {
   };
 
   const handleCreate = async () => {
-    if (!activeProjectId || !requiredDate || items.length === 0) return;
-    await createRequest({
-      projectId: activeProjectId,
-      wbsId: wbsId || undefined,
-      costCodeId: costCodeId || undefined,
-      vendorId: vendorId || undefined,
-      requiredDate,
-      priority,
-      notes,
-      items,
-    }).unwrap();
+    try {
+      if (!activeProjectId || !requiredDate || items.length === 0) return;
+      await createRequest({
+        projectId: activeProjectId,
+        wbsId: wbsId || undefined,
+        costCodeId: costCodeId || undefined,
+        vendorId: vendorId || undefined,
+        requiredDate,
+        priority,
+        notes,
+        items,
+      }).unwrap();
 
-    setOpenModal(false);
-    setWbsId('');
-    setCostCodeId('');
-    setVendorId('');
-    setNotes('');
-    setItems([{ description: '', quantity: 1, unit: 'pcs', estimatedUnitPrice: 0 }]);
+      setOpenModal(false);
+      setWbsId('');
+      setCostCodeId('');
+      setVendorId('');
+      setNotes('');
+      setItems([{ description: '', quantity: 1, unit: 'pcs', estimatedUnitPrice: 0 }]);
+    } catch (err) {
+      enqueueSnackbar(getApiErrorMessage(err), { variant: 'error' });
+    }
   };
 
   return (
@@ -135,7 +139,7 @@ export default function ProcurementPage() {
             <Select
               value={activeProjectId}
               label="Select Project"
-              onChange={(e) => setSelectedProjectId(e.target.value)}
+              onChange={(e) => selectProject(e.target.value)}
             >
               {projects.map((p) => (
                 <MenuItem key={p.id} value={p.id}>
